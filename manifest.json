@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Pixel Perfect Overlay",
+  "version": "1.0",
+  "description": "A Chrome extension that shows an overlay with an iframe",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "action": {
+    "default_title": "Pixel Perfect Overlay"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+} 
