@@ -3,7 +3,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     // Inject the CSS first
     await chrome.scripting.insertCSS({
       target: { tabId: tab.id },
-      files: ['overlay.css']
+      files: ['pixel-perfect.css']
     });
     
     // Inject the content script
