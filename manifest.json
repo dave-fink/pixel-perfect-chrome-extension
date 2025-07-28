@@ -8,9 +8,20 @@
     "scripting"
   ],
   "action": {
-    "default_icon": "pixel-perfect.png"
+    "default_icon": {
+      "16": "pixel-perfect.png",
+      "32": "pixel-perfect.png",
+      "48": "pixel-perfect.png",
+      "128": "pixel-perfect.png"
+    }
   },
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["pixel-perfect-icon.png", "pixel-perfect-gray.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 } 
