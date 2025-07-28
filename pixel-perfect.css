@@ -65,7 +65,6 @@
 }
 
 
-
 #url-container {
   position: relative;
   display: inline-block;
@@ -94,7 +93,6 @@
 
 #url-input:disabled {
   color: #666;
-  background: #0f0f0f;
   border-color: #444;
   cursor: not-allowed;
 }

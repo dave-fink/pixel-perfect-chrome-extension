@@ -214,6 +214,7 @@ function createOverlay() {
 
   const dragHandle = document.createElement('div');
   dragHandle.id = 'drag-handle';
+  dragHandle.title = 'Drag to move';
 
   // Create URL input container
   const urlContainer = document.createElement('div');
@@ -228,6 +229,7 @@ function createOverlay() {
   const inputStoredUrl = localStorage.getItem('pixelPerfectUrl');
   urlInput.value = inputStoredUrl || 'http://localhost:3000/';
   urlInput.id = 'url-input';
+  urlInput.title = 'Enter the URL for the overlay';
 
   const goButton = document.createElement('button');
   goButton.innerHTML = '→';
@@ -255,7 +257,7 @@ function createOverlay() {
   const opacityValue = textStoredOpacity || '100';
   value.textContent = opacityValue + '%';
   value.style.cursor = 'pointer';
-  value.title = 'Click to toggle 0%';
+  value.title = 'Click to hide/show overlay';
 
   // Add invert toggle button
   const invertBtn = document.createElement('button');
@@ -336,7 +338,6 @@ function createOverlay() {
       goButton.disabled = false;
       invertBtn.disabled = false;
       scrollModeSelect.disabled = false;
-      closeBtn.disabled = false;
       value.disabled = false;
       
       // Restore last opacity
@@ -350,17 +351,15 @@ function createOverlay() {
       ppOverlay.style.zIndex = '-999999';
       ppOverlay.style.opacity = '0';
       
-      // Disable all controls
+      // Disable all controls except close button
       slider.disabled = true;
       urlInput.disabled = true;
       goButton.disabled = true;
       invertBtn.disabled = true;
       scrollModeSelect.disabled = true;
-      closeBtn.disabled = true;
       value.disabled = true;
       
-      // Set 50% opacity for OFF state
-      slider.value = '50';
+      // Set 50% opacity for OFF state (keep slider value unchanged)
       ppIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
       console.log('Hidden overlay with 50% opacity and disabled controls');
