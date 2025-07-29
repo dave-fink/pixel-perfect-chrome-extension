@@ -2,7 +2,7 @@
 
 <img width="857" height="95" alt="image" src="https://github.com/user-attachments/assets/da84710f-40d7-4624-b0b8-9044ffef8c3a" />
 
-A Chrome extension that overlays a development URL (e.g. localhost:3000) directly on top of any webpage—perfect for pixel-perfect comparisons and design verification. Work in real time without the hassle of switching tabs.
+A Chrome extension that overlays a development URL (e.g. localhost:3000) directly on top of any webpage for pixel-perfect comparison and design verification. Work in real time without the hassle of switching tabs.
 
 
 **Adjust opacity and invert Colors to easily see alignment issues:**
@@ -20,6 +20,7 @@ A Chrome extension that overlays a development URL (e.g. localhost:3000) directl
 3. Enable "Developer mode" in the top right corner
 4. Click "Load unpacked" and select the directory containing the extension files
 5. The extension should now appear in your extensions list
+6. Pin it to your toolbar and click the icon to activate it on any web page
 
 ## Features
 
