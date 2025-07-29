@@ -2,6 +2,14 @@
 
 A Chrome extension for pixel-perfect comparison between development and production sites using an overlay iframe.
 
+## Installation
+
+1. **Download the files** - Download or clone this repository to your computer
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" in the top right corner
+4. Click "Load unpacked" and select the directory containing the extension files
+5. The extension should now appear in your extensions list
+
 ## Features
 
 - **Full-screen overlay** - 100% width/height iframe overlay
@@ -18,13 +26,6 @@ A Chrome extension for pixel-perfect comparison between development and producti
 - **Settings persistence** - Remembers URL, opacity, invert state, and position
 - **Auto-restore** - Automatically restores overlay after page reload
 - **Icon state** - Toolbar icon changes color based on active state
-
-## Installation
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" in the top right corner
-3. Click "Load unpacked" and select this directory
-4. The extension should now appear in your extensions list
 
 ## Usage
 
