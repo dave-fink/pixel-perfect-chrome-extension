@@ -1,0 +1,336 @@
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+}
+
+#overlay-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+#controls {
+  --background: rgba(69, 69, 69, 0.9);
+  --dark-background: #353535;
+  --border-radius: 12px;
+  --blue: #0075ff;
+
+  position: fixed;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 400px;
+  height: 50px;
+  box-sizing: border-box;
+  background: var(--background);
+  backdrop-filter: blur(10px);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  #drag-handle {
+    width: 50px;
+    height: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 8px;
+    padding: 0 8px;
+    background-color: var(--dark-background);
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAACbUlEQVRYhe2XX0hTURzHP7tZuba2OWN7yj/FEiFGimGyipLQHvoDdxQkJYGjXnpqSBBCFApCUpD0ENhLQUVxH6R6WTAqGiU+mEnorLlyRVQEmvtTOVgPi+ua290mWyPw+/Q7v3N/v9/nnHvO4RxVLBbDbrfXAb3ADkBNYRUGngFnJEl6qRJFse6PY02BCycrBGwXgJ4iFAfQAD0C8WkvlnYKgLaIANoSpd5gqZVxY1vGLMZf7ykPv8IQ9uRMoAgQFdYSUFsyJgmoLaDfQ9v6Fo5UOpmciOIZMmQFIGT1VZa6FdjMZe9NTp74QO/5YQz6aMYYxRlI1mjHqUW+4E8jL/w2nJ5WANxfTVx7coXTLXu52D1LZ9cuZmbTl8kJwFpxVbYv9Tcn9HhwaD8xEDwOgNPTytFtzZjK3Dja39DXX5sfgEQt/sf30VUe4HuJEYC3n22YdG6aGsepGqzm3XRpyjx5XQP6+W+y7f24QbZrLHNpY/IKkKi50EJqsylSeIAfK6v+2rLVxrGs4vIG4C1vl20NEfY39clt35QubVxOi/De8IBsT5etA2B+hQa/pl5efADntkiyHYmsUjyUcgI4/KBjoWFM/c2FehedB4/JbZfbqphzydswWZs0Ibp33+HQVofsez5Uy43bFfkDuLvvekp/jXmEjeZHaFZPAvFpd7mtGYvnDJA4usGHDbLt/wL+MR3QgG9Kx+sJreLxu2SARGUzumxUsINoGWAZ4L8BUNyGhrAH0Re/6doaZwoCoBJFMURxXkYAQQF4XKTiAE8FoIv4i/VfKwycFSRJGiH+PnQB6e9O+S3sAmySJI3+BlQipXqPcB8NAAAAAElFTkSuQmCC');
+    background-size: 24px 24px;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: var(--border-radius) 0 0 var(--border-radius);
+    cursor: grab;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: rgba(53, 53, 53, 0.8);
+    }
+  }
+
+  #url-container {
+    position: relative;
+    display: inline-block;
+  }
+  
+  #url-input {
+    width: 220px;
+    height: auto;
+    padding: 8px 30px 8px 10px;
+    background: var(--background);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 11px;
+    color: #e0e0e0;
+
+    &:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+    
+    &::placeholder {
+      color: #999;
+    }
+    
+    &:disabled {
+      color: #666;
+      border-color: #444;
+      cursor: not-allowed;
+    }
+    
+    &:disabled::placeholder {
+      color: #555;
+    }    
+  }
+  
+  #go-button {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    padding: 4px 0 4px 4px;
+    background: transparent;
+    border: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #e0e0e0;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--blue);
+    }
+    
+    &:disabled {
+      color: #666;
+      cursor: not-allowed;
+    }
+    
+    &:disabled:hover {
+      color: #666;
+    }    
+  }
+  
+  #opacity-slider {
+    position: relative;
+    width: 160px;
+    height: 4px;
+    background: #555;
+    border-radius: 2px;
+    cursor: pointer;
+
+    &.disabled {
+      cursor: not-allowed;
+    }
+
+    #slider-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #777;;
+      border-radius: 2px;
+    }
+    &.disabled #slider-track { background: #777 }
+    
+    #slider-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: var(--blue);
+      border-radius: 2px;
+    }
+    &.disabled #slider-fill { background: #666 }
+    
+    #slider-thumb {
+      position: absolute;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      background: var(--blue);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+    }
+
+    &.disabled #slider-thumb {
+      background: #666;
+      cursor: not-allowed;
+    }     
+  }
+
+  #opacity-value {
+    min-width: 32px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: #e0e0e0;
+    user-select: none;
+  }
+  
+  #invert-btn {
+    min-width: 66px;
+    padding: 6px 12px;
+    background: var(--background);
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #e0e0e0;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--blue);
+    }
+    
+    &:disabled {
+      color: #666;
+      border-color: #444;
+      cursor: not-allowed;
+    }
+    
+    &:disabled:hover {
+      color: #666;
+      border-color: #444;
+    }
+  }
+
+  #scroll-mode-select {
+    width: auto;
+    height: 28px;
+    padding: 4px 12px;
+    box-sizing: border-box;
+    background: var(--background);
+    border: 1px solid #555;
+    border-radius: 4px;
+    outline: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: #e0e0e0;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--blue);
+    }
+    
+    &:disabled {
+      color: #666;
+      border-color: #444;
+      cursor: not-allowed;
+    }
+    
+    &:disabled:hover {
+      color: #666;
+      border-color: #444;
+    }
+    
+    & option {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      padding: 4px;
+    }    
+  }
+  
+  #close-btn {
+    display: block;
+    width: 36px;
+    height: inherit;
+    background: var(--dark-background);
+    border: none;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 18px;
+    font-weight: normal;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      opacity: .8;
+    }
+  }
+  
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+
+    input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+
+      &:checked + .slider {
+        background-color: var(--blue);
+      }
+      
+      &:focus + .slider {
+        box-shadow: 0 0 1px var(--blue);
+      }
+      
+      &:checked + .slider:before {
+        transform: translateX(20px);
+      }
+    }
+    
+    .slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: .4s;
+
+      &:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: .2s;
+      }
+    }
+  }
+}

@@ -1,31 +1,25 @@
 # Pixel Perfect Overlay Chrome Extension
 
-A simple Chrome extension that creates a full-screen overlay with an iframe when the extension icon is clicked.
-
-## Features
-
-- Click the extension icon to toggle a full-screen overlay
-- The overlay contains an iframe pointing to google.com
-- The overlay takes up 100% width and height of the viewport
-- Click the extension icon again to close the overlay
+A Chrome extension for pixel-perfect comparison between development and production sites using an overlay iframe.
 
 ## Installation
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" in the top right corner
-3. Click "Load unpacked" and select this directory
-4. The extension should now appear in your extensions list
+1. **Download the files** - Download or clone this repository to your computer
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" in the top right corner
+4. Click "Load unpacked" and select the directory containing the extension files
+5. The extension should now appear in your extensions list
 
-## Usage
+## Features
 
-1. Navigate to any webpage
-2. Click the extension icon in the Chrome toolbar
-3. A full-screen overlay with google.com will appear
-4. Click the extension icon again to close the overlay
-
-## Files
-
-- `manifest.json` - Extension configuration
-- `background.js` - Service worker that handles extension icon clicks
-- `content.js` - Content script that creates and manages the overlay
-- `overlay.css` - Styles for the overlay
+- **Full-screen overlay** - Overlays a wep page on top of the current URL
+- **Draggable** - Move the control bar anywhere on screen
+- **On/Off toggle** - Turn overlay off/on
+- **URL input** - Input field to change the overlay source
+- **Opacity slider** - Slider to adjust overlay transparency (0-100%)
+- **Color inversion** - Toggle normal/inverted colors
+- **Scroll modes** - Three scroll synchronization options:
+  - "Scroll Both" - Both page and iframe scroll together
+  - "Scroll Original" - Only original page scrolls
+  - "Scroll Overlay" - Only iframe scrolls
+- **Arrow key scrolling** - Use keyboard up and down arrows for fine tune scrolling 1px at a time
