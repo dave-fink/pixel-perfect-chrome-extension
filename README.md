@@ -2,6 +2,9 @@
 
 A Chrome extension for pixel-perfect comparison between development and production sites using an overlay iframe.
 
+<img width="857" height="95" alt="image" src="https://github.com/user-attachments/assets/da84710f-40d7-4624-b0b8-9044ffef8c3a" />
+
+
 ## Installation
 
 1. **Download the files** - [Download the files](https://github.com/dave-fink/pixel-perfect-chrome-extension/archive/refs/heads/main.zip) or clone this repository to your computer
