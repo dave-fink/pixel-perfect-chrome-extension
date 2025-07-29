@@ -76,6 +76,33 @@ function detectContentBoundaries() {
   };
 }
 
+// Function to check if page has a transparent background
+function hasTransparentBackground() {
+  // Check body background
+  const bodyStyle = window.getComputedStyle(document.body);
+  const bodyBg = bodyStyle.backgroundColor;
+  
+  // Check html background
+  const htmlStyle = window.getComputedStyle(document.documentElement);
+  const htmlBg = htmlStyle.backgroundColor;
+  
+  // Check if backgrounds are transparent or rgba(0,0,0,0)
+  const isTransparent = (color) => {
+    return color === 'transparent' || 
+           color === 'rgba(0, 0, 0, 0)' || 
+           color === 'rgba(0,0,0,0)' ||
+           color === 'initial' ||
+           color === 'inherit';
+  };
+  
+  const bodyTransparent = isTransparent(bodyBg);
+  const htmlTransparent = isTransparent(htmlBg);
+  
+  console.log('Background check:', { bodyBg, htmlBg, bodyTransparent, htmlTransparent });
+  
+  return bodyTransparent && htmlTransparent;
+}
+
 // Function to adjust overlay positioning to match content
 function adjustOverlayPosition() {
   if (!ppOverlay) return;
@@ -286,6 +313,7 @@ function createOverlay() {
   if (storedInverted === 'true') {
     ppIsInverted = true;
     ppIframe.style.filter = 'invert(1)';
+    ppIframe.style.backgroundColor = 'white'; // Add white background for inversion
   }
   
   // Apply stored opacity to iframe
@@ -575,9 +603,11 @@ function createOverlay() {
 
     if (ppIsInverted) {
       ppIframe.style.filter = 'invert(1)';
+      ppIframe.style.backgroundColor = 'white'; // Add white background for inversion
       invertBtn.textContent = 'Normal';
     } else {
       ppIframe.style.filter = 'none';
+      ppIframe.style.backgroundColor = 'transparent'; // Remove any background
       invertBtn.textContent = 'Invert';
     }
     
