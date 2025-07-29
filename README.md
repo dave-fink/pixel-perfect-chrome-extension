@@ -7,7 +7,13 @@ A Chrome extension that overlays a development URL (e.g. localhost:3000) directl
 
 **Adjust opacity and invert Colors to easily see alignment issues:**
 
-<img width="165" height="107" alt="image" src="https://github.com/user-attachments/assets/dbd3f4ec-a8be-4ebe-8146-56b92cb8b55d" />
+<img title="BEFORE" width="282" height="282" alt="image" src="https://github.com/user-attachments/assets/03fd8c7c-9c64-440f-a3d7-7c352bed2e2a" />
+
+<img title="AFTER" width="282" height="283" alt="image" src="https://github.com/user-attachments/assets/469d1d10-4a47-451d-9543-4af2352925b5" />
+
+
+
+
 
 
 
