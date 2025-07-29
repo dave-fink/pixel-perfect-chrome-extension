@@ -475,12 +475,39 @@ function createOverlay() {
     document.addEventListener('mousemove', onSliderMouseMove);
     document.addEventListener('mouseup', onSliderMouseUp);
   });
+
+  // Add touch support for slider thumb
+  sliderThumb.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    isSliderDragging = true;
+    const touch = e.touches[0];
+    sliderStartX = touch.clientX;
+    sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
+    document.addEventListener('touchmove', onSliderTouchMove);
+    document.addEventListener('touchend', onSliderTouchEnd);
+  });
   
   sliderContainer.addEventListener('click', function(e) {
     if (!isSliderDragging) {
       const rect = sliderContainer.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const percentage = (clickX / rect.width) * 100;
+      const clampedPercentage = Math.max(0, Math.min(100, percentage));
+      
+      sliderThumb.style.left = clampedPercentage + '%';
+      sliderFill.style.width = clampedPercentage + '%';
+      updateOpacity(clampedPercentage);
+    }
+  });
+
+  // Add touch support for slider container
+  sliderContainer.addEventListener('touchstart', function(e) {
+    if (!isSliderDragging) {
+      e.preventDefault();
+      const rect = sliderContainer.getBoundingClientRect();
+      const touch = e.touches[0];
+      const touchX = touch.clientX - rect.left;
+      const percentage = (touchX / rect.width) * 100;
       const clampedPercentage = Math.max(0, Math.min(100, percentage));
       
       sliderThumb.style.left = clampedPercentage + '%';
@@ -506,6 +533,27 @@ function createOverlay() {
     isSliderDragging = false;
     document.removeEventListener('mousemove', onSliderMouseMove);
     document.removeEventListener('mouseup', onSliderMouseUp);
+  }
+
+  function onSliderTouchMove(e) {
+    if (!isSliderDragging) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const rect = sliderContainer.getBoundingClientRect();
+    const deltaX = touch.clientX - sliderStartX;
+    const newLeft = sliderStartLeft + (deltaX / rect.width) * 100;
+    const clampedLeft = Math.max(0, Math.min(100, newLeft));
+    
+    sliderThumb.style.left = clampedLeft + '%';
+    sliderFill.style.width = clampedLeft + '%';
+    updateOpacity(clampedLeft);
+  }
+
+  function onSliderTouchEnd() {
+    isSliderDragging = false;
+    document.removeEventListener('touchmove', onSliderTouchMove);
+    document.removeEventListener('touchend', onSliderTouchEnd);
   }
   
   function updateOpacity(percentage) {
