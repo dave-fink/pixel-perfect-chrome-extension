@@ -4,7 +4,7 @@ A Chrome extension for pixel-perfect comparison between development and producti
 
 ## Installation
 
-1. **Download the files** - Download or clone this repository to your computer
+1. **Download the files** - [Download the files](https://github.com/dave-fink/pixel-perfect-chrome-extension/archive/refs/heads/main.zip) or clone this repository to your computer
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode" in the top right corner
 4. Click "Load unpacked" and select the directory containing the extension files
