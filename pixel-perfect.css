@@ -266,6 +266,29 @@
     }    
   }
   
+
+  /* fine tune position - disabled for now */
+  #left-btn, #right-btn {
+    display: block;
+    width: 36px;
+    height: inherit;
+    background: var(--dark-background);
+    border: none;
+    border-radius: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    touch-action: manipulation;
+
+    &:hover {
+      opacity: .8;
+    }
+    display: none;
+  }
+  
   #close-btn {
     display: block;
     width: 36px;

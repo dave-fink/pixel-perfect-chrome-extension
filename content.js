@@ -15,6 +15,94 @@ let ppLastOpacityValue = 100;
 let ppScrollMode = 'both'; // 'both', 'original', 'overlay'
 let ppIsActive = false; // Track if extension is active
 
+// Function to detect webpage content boundaries
+function detectContentBoundaries() {
+  // Look for common content containers
+  const selectors = [
+    'main',
+    'article',
+    '.main',
+    '.content',
+    '.container',
+    '.wrapper',
+    '#main',
+    '#content',
+    '#container',
+    '#wrapper',
+    'body > div:first-child',
+    'body > div:first-child > div'
+  ];
+  
+  let contentElement = null;
+  
+  // Find the first matching content element
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element && element.offsetWidth > 0 && element.offsetHeight > 0) {
+      contentElement = element;
+      break;
+    }
+  }
+  
+  // If no content element found, try to find the largest content area
+  if (!contentElement) {
+    const allDivs = document.querySelectorAll('div');
+    let largestArea = 0;
+    
+    for (const div of allDivs) {
+      const rect = div.getBoundingClientRect();
+      const area = rect.width * rect.height;
+      if (area > largestArea && rect.width > 200 && rect.height > 200) {
+        largestArea = area;
+        contentElement = div;
+      }
+    }
+  }
+  
+  // If still no content element found, use body
+  if (!contentElement) {
+    contentElement = document.body;
+  }
+  
+  const rect = contentElement.getBoundingClientRect();
+  const bodyRect = document.body.getBoundingClientRect();
+  
+  return {
+    left: rect.left,
+    right: rect.right,
+    width: rect.width,
+    bodyLeft: bodyRect.left,
+    bodyWidth: bodyRect.width
+  };
+}
+
+// Function to adjust overlay positioning to match content
+function adjustOverlayPosition() {
+  if (!ppOverlay) return;
+  
+  const boundaries = detectContentBoundaries();
+  const viewportWidth = window.innerWidth;
+  
+  // Calculate the offset needed to align with content
+  const contentLeft = boundaries.left;
+  const contentWidth = boundaries.width;
+  
+  console.log('Content boundaries detected:', boundaries);
+  console.log('Viewport width:', viewportWidth);
+  
+  // If content is centered or has margins, adjust overlay accordingly
+  if (contentLeft > 0 || contentWidth < viewportWidth) {
+    ppOverlay.style.left = contentLeft + 'px';
+    ppOverlay.style.width = contentWidth + 'px';
+    console.log('Adjusted overlay position to match content:', { left: contentLeft, width: contentWidth });
+  } else {
+    // Reset to full viewport if content spans full width
+    ppOverlay.style.left = '0px';
+    ppOverlay.style.width = '100vw';
+    console.log('Reset overlay to full viewport width');
+  }
+}
+
 // Define event handlers first to avoid reference errors
 function globalWheelHandler(e) {
   if (ppIframe && ppIframe.style.opacity !== '0') {
@@ -144,6 +232,7 @@ function toggleOverlay() {
     // Remove event listeners
     document.removeEventListener('wheel', globalWheelHandler);
     document.removeEventListener('keydown', arrowKeyHandler);
+    window.removeEventListener('resize', adjustOverlayPosition);
     
     // Store inactive state
     localStorage.setItem('pixelPerfectActive', 'false');
@@ -190,6 +279,7 @@ function createOverlay() {
   ppIframe.style.height = document.body.scrollHeight + 'px';
   ppIframe.style.pointerEvents = 'none';
   ppIframe.style.transition = 'transform 0.1s ease-out';
+  ppIframe.style.touchAction = 'none'; // Prevent touch scrolling on iframe
   
   // Apply invert filter if previously saved
   const storedInverted = localStorage.getItem('pixelPerfectInverted');
@@ -325,6 +415,40 @@ function createOverlay() {
   closeBtn.textContent = '×';
   closeBtn.id = 'close-btn';
   closeBtn.title = 'Close overlay';
+
+  // Add manual adjustment buttons
+  const leftBtn = document.createElement('button');
+  leftBtn.textContent = '←';
+  leftBtn.id = 'left-btn';
+  leftBtn.title = 'Shift overlay left';
+  
+  const adjustLeft = () => {
+    const currentLeft = parseInt(ppOverlay.style.left) || 0;
+    ppOverlay.style.left = (currentLeft - 1) + 'px';
+  };
+  
+  leftBtn.addEventListener('click', adjustLeft);
+  leftBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    adjustLeft();
+  });
+
+  const rightBtn = document.createElement('button');
+  rightBtn.textContent = '→';
+  rightBtn.id = 'right-btn';
+  rightBtn.title = 'Shift overlay right';
+  
+  const adjustRight = () => {
+    const currentLeft = parseInt(ppOverlay.style.left) || 0;
+    ppOverlay.style.left = (currentLeft + 1) + 'px';
+  };
+  
+  rightBtn.addEventListener('click', adjustRight);
+  rightBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    adjustRight();
+  });
+
 
   // URL handling with Go button and page reload
   goButton.addEventListener('click', function() {
@@ -523,6 +647,8 @@ function createOverlay() {
     toggleOverlay();
   });
 
+
+
   // Make drag handle draggable
   let isDragging = false;
   let dragOffset = { x: 0, y: 0 };
@@ -558,10 +684,49 @@ function createOverlay() {
     ppControls.style.cursor = 'grabbing';
   });
 
+  // Add touch support for dragging
+  dragHandle.addEventListener('touchstart', function(e) {
+    console.log('Drag handle touchstart');
+    e.preventDefault();
+    isDragging = true;
+
+    const touch = e.touches[0];
+    const rect = ppControls.getBoundingClientRect();
+    initialPosition.x = rect.left;
+    initialPosition.y = rect.top;
+
+    dragOffset.x = touch.clientX - rect.left;
+    dragOffset.y = touch.clientY - rect.top;
+
+    ppControls.style.transform = 'none';
+    ppControls.style.left = initialPosition.x + 'px';
+    ppControls.style.top = initialPosition.y + 'px';
+  });
+
   document.addEventListener('mousemove', function(e) {
     if (isDragging) {
       const x = e.clientX - dragOffset.x;
       const y = e.clientY - dragOffset.y;
+
+      // Keep controls within viewport bounds
+      const maxX = window.innerWidth - ppControls.offsetWidth;
+      const maxY = window.innerHeight - ppControls.offsetHeight;
+
+      const clampedX = Math.max(0, Math.min(x, maxX));
+      const clampedY = Math.max(0, Math.min(y, maxY));
+
+      ppControls.style.left = clampedX + 'px';
+      ppControls.style.top = clampedY + 'px';
+    }
+  });
+
+  // Add touch move support
+  document.addEventListener('touchmove', function(e) {
+    if (isDragging) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const x = touch.clientX - dragOffset.x;
+      const y = touch.clientY - dragOffset.y;
 
       // Keep controls within viewport bounds
       const maxX = window.innerWidth - ppControls.offsetWidth;
@@ -590,6 +755,21 @@ function createOverlay() {
     }
   });
 
+  // Add touch end support
+  document.addEventListener('touchend', function() {
+    if (isDragging) {
+      isDragging = false;
+      
+      // Save position to localStorage
+      const rect = ppControls.getBoundingClientRect();
+      const position = {
+        x: rect.left,
+        y: rect.top
+      };
+      localStorage.setItem('pixelPerfectPosition', JSON.stringify(position));
+    }
+  });
+
   // Add event listeners for scroll and arrow key handling
   document.addEventListener('wheel', globalWheelHandler);
   document.addEventListener('keydown', arrowKeyHandler);
@@ -605,11 +785,22 @@ function createOverlay() {
   ppControls.appendChild(value);
   ppControls.appendChild(invertBtn);
   ppControls.appendChild(scrollModeSelect);
+  ppControls.appendChild(leftBtn);
+  ppControls.appendChild(rightBtn);
   ppControls.appendChild(closeBtn);
   ppOverlay.appendChild(ppIframe);
   
   // Add both overlay and controls as siblings to body
   document.body.appendChild(ppOverlay);
   document.body.appendChild(ppControls);
+  
+  // Adjust overlay position to match content boundaries with a small delay
+  setTimeout(() => {
+    adjustOverlayPosition();
+  }, 100);
+  
+  // Add resize listener to adjust overlay position when window is resized
+  window.addEventListener('resize', adjustOverlayPosition);
+  
   console.log('Overlay and controls created and added to DOM successfully');
 } 
