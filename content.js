@@ -241,14 +241,25 @@ function createOverlay() {
   goButton.style.transform = 'translateY(-50%)';
   goButton.style.zIndex = '1';
 
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = '0';
-  slider.max = '100';
+  const sliderContainer = document.createElement('div');
+  sliderContainer.id = 'opacity-slider';
+  
+  const sliderTrack = document.createElement('div');
+  sliderTrack.id = 'slider-track';
+  
+  const sliderFill = document.createElement('div');
+  sliderFill.id = 'slider-fill';
+  
+  const sliderThumb = document.createElement('div');
+  sliderThumb.id = 'slider-thumb';
+  
   // Get stored opacity value or default to 100
   const storedOpacity = localStorage.getItem('pixelPerfectOpacity');
-  slider.value = storedOpacity || '100';
-  slider.id = 'opacity-slider';
+  const initialValue = parseInt(storedOpacity) || 100;
+  
+  sliderContainer.appendChild(sliderTrack);
+  sliderContainer.appendChild(sliderFill);
+  sliderContainer.appendChild(sliderThumb);
 
   const value = document.createElement('span');
   value.id = 'opacity-value';
@@ -256,8 +267,7 @@ function createOverlay() {
   const textStoredOpacity = localStorage.getItem('pixelPerfectOpacity');
   const opacityValue = textStoredOpacity || '100';
   value.textContent = opacityValue + '%';
-  value.style.cursor = 'pointer';
-  value.title = 'Click to hide/show overlay';
+  value.title = 'Current opacity value';
 
   // Add invert toggle button
   const invertBtn = document.createElement('button');
@@ -284,7 +294,7 @@ function createOverlay() {
   
   const originalOption = document.createElement('option');
   originalOption.value = 'original';
-  originalOption.textContent = 'Scroll Original';
+  originalOption.textContent = 'Scroll Page';
   
   const overlayOption = document.createElement('option');
   overlayOption.value = 'overlay';
@@ -293,6 +303,22 @@ function createOverlay() {
   scrollModeSelect.appendChild(bothOption);
   scrollModeSelect.appendChild(originalOption);
   scrollModeSelect.appendChild(overlayOption);
+
+  // Add on/off toggle switch
+  const toggleSwitch = document.createElement('label');
+  toggleSwitch.className = 'switch';
+  toggleSwitch.title = 'Toggle overlay on/off';
+  toggleSwitch.style.marginRight = '8px';
+  
+  const toggleInput = document.createElement('input');
+  toggleInput.type = 'checkbox';
+  toggleInput.checked = true; // Start as ON
+  
+  const toggleSlider = document.createElement('span');
+  toggleSlider.className = 'slider round';
+  
+  toggleSwitch.appendChild(toggleInput);
+  toggleSwitch.appendChild(toggleSlider);
 
   // Add close button
   const closeBtn = document.createElement('button');
@@ -314,55 +340,108 @@ function createOverlay() {
     }
   });
 
-  slider.addEventListener('input', function() {
-    const opacity = this.value / 100;
-    console.log('Slider changed to:', this.value, 'opacity:', opacity);
-    ppIframe.style.opacity = opacity;
-    value.textContent = this.value + '%';
-    ppLastOpacityValue = parseInt(this.value);
-    // Save opacity setting to localStorage
-    localStorage.setItem('pixelPerfectOpacity', this.value);
+  // Set initial position
+  sliderThumb.style.left = initialValue + '%';
+  sliderFill.style.width = initialValue + '%';
+  
+  let isSliderDragging = false;
+  let sliderStartX = 0;
+  let sliderStartLeft = 0;
+  
+  sliderThumb.addEventListener('mousedown', function(e) {
+    isSliderDragging = true;
+    sliderStartX = e.clientX;
+    sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
+    document.addEventListener('mousemove', onSliderMouseMove);
+    document.addEventListener('mouseup', onSliderMouseUp);
   });
+  
+  sliderContainer.addEventListener('click', function(e) {
+    if (!isSliderDragging) {
+      const rect = sliderContainer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percentage = (clickX / rect.width) * 100;
+      const clampedPercentage = Math.max(0, Math.min(100, percentage));
+      
+      sliderThumb.style.left = clampedPercentage + '%';
+      sliderFill.style.width = clampedPercentage + '%';
+      updateOpacity(clampedPercentage);
+    }
+  });
+  
+  function onSliderMouseMove(e) {
+    if (!isSliderDragging) return;
+    
+    const rect = sliderContainer.getBoundingClientRect();
+    const deltaX = e.clientX - sliderStartX;
+    const newLeft = sliderStartLeft + (deltaX / rect.width) * 100;
+    const clampedLeft = Math.max(0, Math.min(100, newLeft));
+    
+    sliderThumb.style.left = clampedLeft + '%';
+    sliderFill.style.width = clampedLeft + '%';
+    updateOpacity(clampedLeft);
+  }
+  
+  function onSliderMouseUp() {
+    isSliderDragging = false;
+    document.removeEventListener('mousemove', onSliderMouseMove);
+    document.removeEventListener('mouseup', onSliderMouseUp);
+  }
+  
+  function updateOpacity(percentage) {
+    const opacity = percentage / 100;
+    console.log('Slider changed to:', percentage, 'opacity:', opacity);
+    ppIframe.style.opacity = opacity;
+    value.textContent = Math.round(percentage) + '%';
+    ppLastOpacityValue = Math.round(percentage);
+    localStorage.setItem('pixelPerfectOpacity', Math.round(percentage).toString());
+  }
 
-  // Add click handler to percentage display
-  value.addEventListener('click', function() {
-    console.log('Percentage clicked, current value:', value.textContent);
-    if (value.textContent === 'OFF') {
+  // Add change handler to toggle switch
+  toggleInput.addEventListener('change', function() {
+    console.log('Toggle switch changed, checked:', toggleInput.checked);
+    if (toggleInput.checked) {
       // Show overlay and restore opacity
       ppOverlay.style.zIndex = '999999';
       ppOverlay.style.opacity = '1';
       
       // Re-enable all controls
-      slider.disabled = false;
+      sliderContainer.classList.remove('disabled');
+      sliderContainer.style.pointerEvents = 'auto';
       urlInput.disabled = false;
       goButton.disabled = false;
       invertBtn.disabled = false;
       scrollModeSelect.disabled = false;
-      value.disabled = false;
       
       // Restore last opacity
-      slider.value = ppLastOpacityValue;
+      sliderThumb.style.left = ppLastOpacityValue + '%';
+      sliderFill.style.width = ppLastOpacityValue + '%';
       const opacity = ppLastOpacityValue / 100;
       ppIframe.style.opacity = opacity;
       value.textContent = ppLastOpacityValue + '%';
       console.log('Restored overlay with opacity:', ppLastOpacityValue + '%');
     } else {
+      // Store current opacity before turning off
+      const currentLeft = parseFloat(sliderThumb.style.left) || 0;
+      ppLastOpacityValue = Math.round(currentLeft);
+      
       // Hide overlay and disable all controls
       ppOverlay.style.zIndex = '-999999';
       ppOverlay.style.opacity = '0';
       
-      // Disable all controls except close button
-      slider.disabled = true;
+      // Disable all controls except close button and toggle switch
+      sliderContainer.classList.add('disabled');
+      sliderContainer.style.pointerEvents = 'none';
       urlInput.disabled = true;
       goButton.disabled = true;
       invertBtn.disabled = true;
       scrollModeSelect.disabled = true;
-      value.disabled = true;
       
-      // Set 50% opacity for OFF state (keep slider value unchanged)
+      // Move slider to 0 and set 50% opacity for OFF state
+      slider.value = '0';
       ppIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
-      console.log('Hidden overlay with 50% opacity and disabled controls');
+      console.log('Hidden overlay with 50% opacity, slider moved to 0, and disabled controls');
     }
   });
 
@@ -395,6 +474,8 @@ function createOverlay() {
       const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
       // Store current iframe position for later restoration
       ppIframe.dataset.savedPosition = currentY;
+      // Reset iframe transform to keep it at current position
+      ppIframe.style.transform = `translateY(${currentY}px)`;
       // Restore main page scroll and padding
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
@@ -410,9 +491,24 @@ function createOverlay() {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
       document.body.style.paddingRight = scrollbarWidth + 'px';
+    } else if (newMode === 'original' && ppScrollMode === 'overlay') {
+      // Switching from overlay to original
+      ppScrollMode = 'original';
+      // Store current iframe position for later restoration
+      const currentTransform = ppIframe.style.transform;
+      const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
+      ppIframe.dataset.savedPosition = currentY;
+      // Reset iframe transform to keep it at current position
+      ppIframe.style.transform = `translateY(${currentY}px)`;
+      // Restore main page scroll and padding
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     } else if (newMode === 'both') {
       // Switching back to both
       ppScrollMode = 'both';
+      // Reset iframe transform to sync with current page scroll
+      const mainScrollY = window.scrollY;
+      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
       // When switching back to both, let it sync naturally
       // Restore main page scroll and padding
       document.body.style.overflow = '';
@@ -503,8 +599,9 @@ function createOverlay() {
   urlContainer.appendChild(goButton);
 
   ppControls.appendChild(dragHandle);
+  ppControls.appendChild(toggleSwitch);
   ppControls.appendChild(urlContainer);
-  ppControls.appendChild(slider);
+  ppControls.appendChild(sliderContainer);
   ppControls.appendChild(value);
   ppControls.appendChild(invertBtn);
   ppControls.appendChild(scrollModeSelect);
