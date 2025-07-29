@@ -1,6 +1,5 @@
 // Check if content script is already running
 if (window.pixelPerfectScriptLoaded) {
-  console.log('Content script already loaded, exiting');
   // Exit early to prevent duplicate scripts
   throw new Error('Content script already loaded');
 }
@@ -98,8 +97,6 @@ function hasTransparentBackground() {
   const bodyTransparent = isTransparent(bodyBg);
   const htmlTransparent = isTransparent(htmlBg);
   
-  console.log('Background check:', { bodyBg, htmlBg, bodyTransparent, htmlTransparent });
-  
   return bodyTransparent && htmlTransparent;
 }
 
@@ -114,19 +111,14 @@ function adjustOverlayPosition() {
   const contentLeft = boundaries.left;
   const contentWidth = boundaries.width;
   
-  console.log('Content boundaries detected:', boundaries);
-  console.log('Viewport width:', viewportWidth);
-  
   // If content is centered or has margins, adjust overlay accordingly
   if (contentLeft > 0 || contentWidth < viewportWidth) {
     ppOverlay.style.left = contentLeft + 'px';
     ppOverlay.style.width = contentWidth + 'px';
-    console.log('Adjusted overlay position to match content:', { left: contentLeft, width: contentWidth });
   } else {
     // Reset to full viewport if content spans full width
     ppOverlay.style.left = '0px';
     ppOverlay.style.width = '100vw';
-    console.log('Reset overlay to full viewport width');
   }
 }
 
@@ -196,13 +188,9 @@ function arrowKeyHandler(e) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Content script received message:', request.action);
-  
   if (request.action === "ping") {
-    console.log('Ping received, content script is active');
     sendResponse({ status: 'ok' });
   } else if (request.action === "toggleOverlay") {
-    console.log('Toggling overlay...');
     toggleOverlay();
   }
 });
@@ -213,11 +201,9 @@ function autoRestoreOverlay() {
   const isActive = localStorage.getItem('pixelPerfectActive') === 'true';
   
   if (storedUrl && isActive) {
-    console.log('Found stored URL and extension is active, auto-creating overlay');
     // Longer delay to ensure page is fully loaded and extension is ready
     setTimeout(() => {
       if (!ppOverlay) {
-        console.log('Auto-creating overlay after page reload');
         toggleOverlay();
       }
     }, 500);
@@ -237,14 +223,11 @@ if (document.readyState === 'loading') {
 }
 
 function toggleOverlay() {
-  console.log('toggleOverlay called, overlay exists:', !!ppOverlay, 'ppIsActive:', ppIsActive);
-  
   // Check if overlay actually exists in DOM
   const overlayInDOM = document.getElementById('overlay');
   const controlsInDOM = document.getElementById('controls');
   
   if (ppOverlay || overlayInDOM || controlsInDOM) {
-    console.log('Removing existing overlay...');
     if (ppOverlay) ppOverlay.remove();
     if (overlayInDOM) overlayInDOM.remove();
     if (controlsInDOM) controlsInDOM.remove();
@@ -264,39 +247,28 @@ function toggleOverlay() {
     // Store inactive state
     localStorage.setItem('pixelPerfectActive', 'false');
     // Update toolbar icon to gray
-    console.log('Sending updateIcon message with active: false');
     chrome.runtime.sendMessage({ action: 'updateIcon', active: false }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('Error sending updateIcon message:', chrome.runtime.lastError);
-      } else {
-        console.log('updateIcon message sent successfully');
       }
     });
-    console.log('Overlay removed successfully');
   } else {
-    console.log('Creating new overlay...');
     createOverlay();
     ppIsActive = true;
     // Store active state
     localStorage.setItem('pixelPerfectActive', 'true');
     // Update toolbar icon to colored
-    console.log('Sending updateIcon message with active: true');
     chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('Error sending updateIcon message:', chrome.runtime.lastError);
-      } else {
-        console.log('updateIcon message sent successfully');
       }
     });
   }
 }
 
 function createOverlay() {
-  console.log('createOverlay started');
-  
   ppOverlay = document.createElement('div');
   ppOverlay.id = 'overlay';
-  console.log('Created overlay div');
 
   ppIframe = document.createElement('iframe');
   // Check for stored URL or use default
@@ -324,11 +296,8 @@ function createOverlay() {
     ppLastOpacityValue = parseInt(iframeStoredOpacity);
   }
   
-  console.log('Created iframe with src:', ppIframe.src);
-
   ppControls = document.createElement('div');
   ppControls.id = 'controls';
-  console.log('Created controls div');
 
   const dragHandle = document.createElement('div');
   dragHandle.id = 'drag-handle';
@@ -480,7 +449,6 @@ function createOverlay() {
 
   // URL handling with Go button and page reload
   goButton.addEventListener('click', function() {
-    console.log('Go button clicked, URL:', urlInput.value);
     // Store URL in localStorage and reload page to bypass CSP
     localStorage.setItem('pixelPerfectUrl', urlInput.value);
     window.location.reload();
@@ -542,7 +510,6 @@ function createOverlay() {
   
   function updateOpacity(percentage) {
     const opacity = percentage / 100;
-    console.log('Slider changed to:', percentage, 'opacity:', opacity);
     ppIframe.style.opacity = opacity;
     value.textContent = Math.round(percentage) + '%';
     ppLastOpacityValue = Math.round(percentage);
@@ -551,7 +518,6 @@ function createOverlay() {
 
   // Add change handler to toggle switch
   toggleInput.addEventListener('change', function() {
-    console.log('Toggle switch changed, checked:', toggleInput.checked);
     if (toggleInput.checked) {
       // Show overlay and restore opacity
       ppOverlay.style.zIndex = '999999';
@@ -571,7 +537,6 @@ function createOverlay() {
       const opacity = ppLastOpacityValue / 100;
       ppIframe.style.opacity = opacity;
       value.textContent = ppLastOpacityValue + '%';
-      console.log('Restored overlay with opacity:', ppLastOpacityValue + '%');
     } else {
       // Store current opacity before turning off
       const currentLeft = parseFloat(sliderThumb.style.left) || 0;
@@ -593,13 +558,11 @@ function createOverlay() {
       slider.value = '0';
       ppIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
-      console.log('Hidden overlay with 50% opacity, slider moved to 0, and disabled controls');
     }
   });
 
   invertBtn.addEventListener('click', function() {
     ppIsInverted = !ppIsInverted;
-    console.log('Invert toggled to:', ppIsInverted);
 
     if (ppIsInverted) {
       ppIframe.style.filter = 'invert(1)';
@@ -618,7 +581,6 @@ function createOverlay() {
   // Add scroll mode dropdown functionality
   scrollModeSelect.addEventListener('change', function() {
     const newMode = this.value;
-    console.log('Scroll mode changing from', ppScrollMode, 'to', newMode);
     
     if (newMode === 'original' && ppScrollMode === 'both') {
       // Switching from both to original
@@ -668,11 +630,9 @@ function createOverlay() {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     }
-    console.log('Scroll mode changed to:', ppScrollMode);
   });
 
   closeBtn.addEventListener('click', function() {
-    console.log('Close button clicked');
     // Use the toggle function to ensure proper state management
     toggleOverlay();
   });
@@ -694,7 +654,6 @@ function createOverlay() {
   }
 
   dragHandle.addEventListener('mousedown', function(e) {
-    console.log('Drag handle mousedown');
     isDragging = true;
 
     // Get current position
@@ -716,7 +675,6 @@ function createOverlay() {
 
   // Add touch support for dragging
   dragHandle.addEventListener('touchstart', function(e) {
-    console.log('Drag handle touchstart');
     e.preventDefault();
     isDragging = true;
 
@@ -832,5 +790,4 @@ function createOverlay() {
   // Add resize listener to adjust overlay position when window is resized
   window.addEventListener('resize', adjustOverlayPosition);
   
-  console.log('Overlay and controls created and added to DOM successfully');
 } 
