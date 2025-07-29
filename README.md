@@ -35,3 +35,6 @@ A Chrome extension that overlays a development URL (e.g. localhost:3000) directl
   - "Scroll Original" - Only original page scrolls
   - "Scroll Overlay" - Only iframe scrolls
 - **Arrow key scrolling** - Use keyboard up and down arrows for fine tune scrolling 1px at a time
+
+
+*⚠️ Disclaimer: This tool is under active development and may not be fully stable. While every effort has been made to ensure reliability, unexpected behavior may occur. If you find a bug, please open a GitHub issue with as much detail as possible. [create a GitHub issue](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues).  Thank you*
