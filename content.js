@@ -332,9 +332,8 @@ function createOverlay() {
   ppControls = document.createElement('div');
   ppControls.id = 'controls';
 
-  const dragHandle = document.createElement('div');
-  dragHandle.id = 'drag-handle';
-  dragHandle.title = 'Drag to move';
+  const ppIcon = document.createElement('div');
+  ppIcon.id = 'pixel-perfect-icon';
 
   // Create URL input container
   const urlContainer = document.createElement('div');
@@ -440,6 +439,12 @@ function createOverlay() {
   toggleSwitch.appendChild(toggleInput);
   toggleSwitch.appendChild(toggleSlider);
 
+  // Add settings button (burger icon)
+  const settingsBtn = document.createElement('button');
+  settingsBtn.innerHTML = '≡';
+  settingsBtn.id = 'settings-btn';
+  settingsBtn.title = 'Settings';
+  
   // Add close button
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '×';
@@ -687,131 +692,152 @@ function createOverlay() {
     }
   });
 
+  // Create settings menu
+  const settingsMenu = document.createElement('div');
+  settingsMenu.id = 'settings-menu';
+  settingsMenu.style.display = 'none';
+  
+  // Add dock setting
+  const dockOption = document.createElement('div');
+  dockOption.className = 'settings-option';
+  dockOption.innerHTML = `
+    <span class="settings-text">Dock</span>
+    <div class="dock-buttons">
+      <button class="dock-btn" data-position="top">⊤</button>
+      <button class="dock-btn" data-position="bottom">⊥</button>
+    </div>
+  `;
+  
+  settingsMenu.appendChild(dockOption);
+  
+  // Set default active state for bottom button
+  const bottomBtn = dockOption.querySelector('.dock-btn[data-position="bottom"]');
+  if (bottomBtn) {
+    bottomBtn.classList.add('active');
+  }
+  
+  // dark theme setting
+  const darkThemeOption = document.createElement('div');
+  darkThemeOption.className = 'settings-option';
+  darkThemeOption.innerHTML = `
+    <span class="settings-text">Dark theme</span>
+    <label class="switch">
+      <input type="checkbox" id="dark-theme-toggle" checked>
+      <span class="slider round"></span>
+    </label>
+  `;
+  
+  settingsMenu.appendChild(darkThemeOption);
+  
+  // Set default dark theme state
+  const darkThemeToggle = darkThemeOption.querySelector('#dark-theme-toggle');
+  const savedTheme = localStorage.getItem('pixelPerfectDarkTheme');
+  if (savedTheme !== null) {
+    darkThemeToggle.checked = savedTheme === 'true';
+  } else {
+    // Default to dark theme
+    darkThemeToggle.checked = true;
+    localStorage.setItem('pixelPerfectDarkTheme', 'true');
+  }
+  
+
+  
+  // Add settings menu to controls
+  ppControls.appendChild(settingsMenu);
+  
+  // Settings button click handler
+  settingsBtn.addEventListener('click', function() {
+    const isVisible = settingsMenu.style.display !== 'none';
+    settingsMenu.style.display = isVisible ? 'none' : 'block';
+  });
+  
+  // Close settings menu when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!ppControls.contains(e.target)) {
+      settingsMenu.style.display = 'none';
+    }
+  });
+  
+  // Dock functionality
+  function dockControls(position) {
+    // Remove any existing positioning and classes
+    ppControls.style.transform = '';
+    ppControls.style.left = '';
+    ppControls.style.right = '';
+    ppControls.classList.remove('top', 'bottom');
+    
+    if (position === 'top') {
+      ppControls.classList.add('top');
+    } else if (position === 'bottom') {
+      ppControls.classList.add('bottom');
+    }
+    
+    // Save dock position to localStorage
+    localStorage.setItem('pixelPerfectDockPosition', position);
+    
+    // Update dock button states
+    document.querySelectorAll('.dock-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.position === position) {
+        btn.classList.add('active');
+      }
+    });
+  }
+  
+  // Add dock button event listeners
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('dock-btn')) {
+      const position = e.target.dataset.position;
+      dockControls(position);
+      
+      // Close settings menu after selection
+      settingsMenu.style.display = 'none';
+    }
+  });
+  
+  // Add dark theme toggle event listener
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'dark-theme-toggle') {
+      const isDark = e.target.checked;
+      localStorage.setItem('pixelPerfectDarkTheme', isDark.toString());
+      
+      // Apply theme to controls
+      if (isDark) {
+        ppControls.classList.add('dark-theme');
+        ppControls.classList.remove('light-theme');
+      } else {
+        ppControls.classList.add('light-theme');
+        ppControls.classList.remove('dark-theme');
+      }
+    }
+  });
+  
+  // Restore dock position from localStorage or default to bottom
+  const savedDockPosition = localStorage.getItem('pixelPerfectDockPosition');
+  if (savedDockPosition) {
+    dockControls(savedDockPosition);
+  } else {
+    // Default to bottom if no saved position
+    dockControls('bottom');
+  }
+  
+  // Apply initial theme
+  const initialTheme = localStorage.getItem('pixelPerfectDarkTheme');
+  if (initialTheme === 'false') {
+    ppControls.classList.add('light-theme');
+    ppControls.classList.remove('dark-theme');
+  } else {
+    // Default to dark theme
+    ppControls.classList.add('dark-theme');
+    ppControls.classList.remove('light-theme');
+  }
+  
+  
   closeBtn.addEventListener('click', function() {
     // Use the toggle function to ensure proper state management
     toggleOverlay();
   });
 
-
-
-  // Make drag handle draggable
-  let isDragging = false;
-  let dragOffset = { x: 0, y: 0 };
-  let initialPosition = { x: 0, y: 0 };
-
-  // Restore position from localStorage
-  const savedPosition = localStorage.getItem('pixelPerfectPosition');
-  if (savedPosition) {
-    const position = JSON.parse(savedPosition);
-    ppControls.style.transform = 'none';
-    ppControls.style.left = position.x + 'px';
-    ppControls.style.top = position.y + 'px';
-  }
-
-  dragHandle.addEventListener('mousedown', function(e) {
-    isDragging = true;
-
-    // Get current position
-    const rect = ppControls.getBoundingClientRect();
-    initialPosition.x = rect.left;
-    initialPosition.y = rect.top;
-
-    // Calculate offset from mouse to controls
-    dragOffset.x = e.clientX - rect.left;
-    dragOffset.y = e.clientY - rect.top;
-
-    // Remove the centering transform and set absolute positioning
-    ppControls.style.transform = 'none';
-    ppControls.style.left = initialPosition.x + 'px';
-    ppControls.style.top = initialPosition.y + 'px';
-
-    ppControls.style.cursor = 'grabbing';
-  });
-
-  // Add touch support for dragging
-  dragHandle.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    isDragging = true;
-
-    const touch = e.touches[0];
-    const rect = ppControls.getBoundingClientRect();
-    initialPosition.x = rect.left;
-    initialPosition.y = rect.top;
-
-    dragOffset.x = touch.clientX - rect.left;
-    dragOffset.y = touch.clientY - rect.top;
-
-    ppControls.style.transform = 'none';
-    ppControls.style.left = initialPosition.x + 'px';
-    ppControls.style.top = initialPosition.y + 'px';
-  });
-
-  document.addEventListener('mousemove', function(e) {
-    if (isDragging) {
-      const x = e.clientX - dragOffset.x;
-      const y = e.clientY - dragOffset.y;
-
-      // Keep controls within viewport bounds
-      const maxX = window.innerWidth - ppControls.offsetWidth;
-      const maxY = window.innerHeight - ppControls.offsetHeight;
-
-      const clampedX = Math.max(0, Math.min(x, maxX));
-      const clampedY = Math.max(0, Math.min(y, maxY));
-
-      ppControls.style.left = clampedX + 'px';
-      ppControls.style.top = clampedY + 'px';
-    }
-  });
-
-  // Add touch move support
-  document.addEventListener('touchmove', function(e) {
-    if (isDragging) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const x = touch.clientX - dragOffset.x;
-      const y = touch.clientY - dragOffset.y;
-
-      // Keep controls within viewport bounds
-      const maxX = window.innerWidth - ppControls.offsetWidth;
-      const maxY = window.innerHeight - ppControls.offsetHeight;
-
-      const clampedX = Math.max(0, Math.min(x, maxX));
-      const clampedY = Math.max(0, Math.min(y, maxY));
-
-      ppControls.style.left = clampedX + 'px';
-      ppControls.style.top = clampedY + 'px';
-    }
-  });
-
-  document.addEventListener('mouseup', function() {
-    if (isDragging) {
-      isDragging = false;
-      ppControls.style.cursor = 'default';
-      
-      // Save position to localStorage
-      const rect = ppControls.getBoundingClientRect();
-      const position = {
-        x: rect.left,
-        y: rect.top
-      };
-      localStorage.setItem('pixelPerfectPosition', JSON.stringify(position));
-    }
-  });
-
-  // Add touch end support
-  document.addEventListener('touchend', function() {
-    if (isDragging) {
-      isDragging = false;
-      
-      // Save position to localStorage
-      const rect = ppControls.getBoundingClientRect();
-      const position = {
-        x: rect.left,
-        y: rect.top
-      };
-      localStorage.setItem('pixelPerfectPosition', JSON.stringify(position));
-    }
-  });
 
   // Add event listeners for scroll and arrow key handling
   document.addEventListener('wheel', globalWheelHandler, { passive: false });
@@ -824,7 +850,7 @@ function createOverlay() {
   urlContainer.appendChild(urlInput);
   urlContainer.appendChild(goButton);
 
-  ppControls.appendChild(dragHandle);
+  ppControls.appendChild(ppIcon);
   ppControls.appendChild(toggleSwitch);
   ppControls.appendChild(urlContainer);
   ppControls.appendChild(sliderContainer);
@@ -833,6 +859,7 @@ function createOverlay() {
   ppControls.appendChild(scrollModeSelect);
   ppControls.appendChild(leftBtn);
   ppControls.appendChild(rightBtn);
+  ppControls.appendChild(settingsBtn);
   ppControls.appendChild(closeBtn);
   ppOverlay.appendChild(ppIframe);
   
