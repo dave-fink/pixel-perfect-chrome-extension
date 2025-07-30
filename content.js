@@ -123,14 +123,43 @@ function adjustOverlayPosition() {
 }
 
 // Define event handlers first to avoid reference errors
+// Throttle function for performance
+function throttle(func, limit) {
+  let inThrottle;
+  return function() {
+    const args = arguments;
+    const context = this;
+    if (!inThrottle) {
+      func.apply(context, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }
+}
+
+// Debounced scroll sync for better performance
+let scrollSyncTimeout;
+let lastScrollY = 0; // Cache last scroll position to avoid unnecessary updates
+
+function syncIframeScroll() {
+  if (ppIframe && ppScrollMode === 'both') {
+    const mainScrollY = window.scrollY;
+    // Only update if scroll position actually changed
+    if (mainScrollY !== lastScrollY) {
+      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+      lastScrollY = mainScrollY;
+    }
+  }
+}
+
 function globalWheelHandler(e) {
   if (ppIframe && ppIframe.style.opacity !== '0') {
     const scrollAmount = e.deltaY;
 
     if (ppScrollMode === 'both') {
-      // Let natural scroll happen, sync iframe to main page
-      const mainScrollY = window.scrollY;
-      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+      // Use throttled sync for smooth performance
+      clearTimeout(scrollSyncTimeout);
+      scrollSyncTimeout = setTimeout(syncIframeScroll, 16); // ~60fps
     } else if (ppScrollMode === 'original') {
       // Only scroll main page, iframe stays at current position
       // Don't change iframe position - let it stay where it is
@@ -140,17 +169,19 @@ function globalWheelHandler(e) {
       e.stopPropagation();
       e.stopImmediatePropagation();
 
-      // Immediately force main page back to stored position
-      const storedMainScrollY = ppIframe.dataset.mainPageScrollY || '0';
-      window.scrollTo(0, parseInt(storedMainScrollY));
+      // Use requestAnimationFrame for smooth iframe scrolling
+      requestAnimationFrame(() => {
+        const storedMainScrollY = ppIframe.dataset.mainPageScrollY || '0';
+        window.scrollTo(0, parseInt(storedMainScrollY));
 
-      const currentTransform = ppIframe.style.transform;
-      const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
-      const newY = currentY - scrollAmount;
+        const currentTransform = ppIframe.style.transform;
+        const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
+        const newY = currentY - scrollAmount;
 
-      if (newY <= 0 && newY >= -10000) { // Simple boundary check
-        ppIframe.style.transform = `translateY(${newY}px)`;
-      }
+        if (newY <= 0 && newY >= -10000) { // Simple boundary check
+          ppIframe.style.transform = `translateY(${newY}px)`;
+        }
+      });
       return false; // Prevent event from bubbling up
     }
   }
@@ -243,6 +274,7 @@ function toggleOverlay() {
     document.removeEventListener('wheel', globalWheelHandler);
     document.removeEventListener('keydown', arrowKeyHandler);
     window.removeEventListener('resize', adjustOverlayPosition);
+    window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
     
     // Store inactive state
     localStorage.setItem('pixelPerfectActive', 'false');
@@ -279,6 +311,7 @@ function createOverlay() {
   ppIframe.style.pointerEvents = 'none';
   ppIframe.style.transition = 'transform 0.1s ease-out';
   ppIframe.style.touchAction = 'none'; // Prevent touch scrolling on iframe
+  ppIframe.style.willChange = 'transform'; // Optimize for transform animations
   
   // Apply invert filter if previously saved
   const storedInverted = localStorage.getItem('pixelPerfectInverted');
@@ -781,8 +814,11 @@ function createOverlay() {
   });
 
   // Add event listeners for scroll and arrow key handling
-  document.addEventListener('wheel', globalWheelHandler);
+  document.addEventListener('wheel', globalWheelHandler, { passive: false });
   document.addEventListener('keydown', arrowKeyHandler);
+  
+  // Add scroll event listener for smoother sync in "both" mode
+  window.addEventListener('scroll', throttle(syncIframeScroll, 16), { passive: true });
 
   // Add elements to URL container
   urlContainer.appendChild(urlInput);
