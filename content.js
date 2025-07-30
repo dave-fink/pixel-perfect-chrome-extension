@@ -629,54 +629,28 @@ function createOverlay() {
   // Add scroll mode dropdown functionality
   scrollModeSelect.addEventListener('change', function() {
     const newMode = this.value;
+    ppScrollMode = newMode;
     
-    if (newMode === 'original' && ppScrollMode === 'both') {
-      // Switching from both to original
-      ppScrollMode = 'original';
-      // Preserve iframe position when switching to original-only mode
-      const currentTransform = ppIframe.style.transform;
-      const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
-      // Store current iframe position for later restoration
-      ppIframe.dataset.savedPosition = currentY;
-      // Reset iframe transform to keep it at current position
-      ppIframe.style.transform = `translateY(${currentY}px)`;
-      // Restore main page scroll and padding
+    if (newMode === 'both') {
+      // Both scroll together - sync iframe with current page scroll
+      const mainScrollY = window.scrollY;
+      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
-    } else if (newMode === 'overlay' && ppScrollMode === 'original') {
-      // Switching from original to overlay
-      ppScrollMode = 'overlay';
-      // Restore iframe position when switching to overlay-only mode
-      const savedPosition = ppIframe.dataset.savedPosition || '0';
-      ppIframe.style.transform = `translateY(${savedPosition}px)`;
-      // Store current main page scroll position to keep it fixed
+    } else if (newMode === 'original') {
+      // Only original page scrolls - keep iframe at current position
+      const currentTransform = ppIframe.style.transform;
+      const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
+      ppIframe.style.transform = `translateY(${currentY}px)`;
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    } else if (newMode === 'overlay') {
+      // Only iframe scrolls - fix main page scroll position
       ppIframe.dataset.mainPageScrollY = window.scrollY.toString();
-      // Calculate scrollbar width and compensate
+      // Calculate scrollbar width and compensate to prevent layout jump
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
       document.body.style.paddingRight = scrollbarWidth + 'px';
-    } else if (newMode === 'original' && ppScrollMode === 'overlay') {
-      // Switching from overlay to original
-      ppScrollMode = 'original';
-      // Store current iframe position for later restoration
-      const currentTransform = ppIframe.style.transform;
-      const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
-      ppIframe.dataset.savedPosition = currentY;
-      // Reset iframe transform to keep it at current position
-      ppIframe.style.transform = `translateY(${currentY}px)`;
-      // Restore main page scroll and padding
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    } else if (newMode === 'both') {
-      // Switching back to both
-      ppScrollMode = 'both';
-      // Reset iframe transform to sync with current page scroll
-      const mainScrollY = window.scrollY;
-      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
-      // When switching back to both, let it sync naturally
-      // Restore main page scroll and padding
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
     }
   });
 
