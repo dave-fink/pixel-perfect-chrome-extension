@@ -303,19 +303,56 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ status: 'ok' });
   } else if (request.action === "toggleOverlay") {
     toggleOverlay();
+  } else if (request.action === "autoCreateOverlay") {
+    console.log('Received autoCreateOverlay message');
+    // Auto-create overlay without toggling state
+    if (!ppOverlay) {
+      console.log('Creating overlay via autoCreateOverlay');
+      createOverlay();
+      ppIsActive = true;
+      // Store active state
+      localStorage.setItem('pixelPerfectActive', 'true');
+      // Update toolbar icon to colored
+      chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error sending updateIcon message:', chrome.runtime.lastError);
+        }
+      });
+      
+      // Update favicon to show extension is active
+      updateFavicon(true);
+    } else {
+      console.log('Overlay already exists, skipping creation');
+    }
   }
 });
 
 // Check if we should auto-create overlay on page load
 function autoRestoreOverlay() {
   const storedUrl = localStorage.getItem('pixelPerfectUrl');
-  const isActive = localStorage.getItem('pixelPerfectActive') === 'true';
+  const isActive = localStorage.getItem('pixelPerfectActive');
   
-  if (storedUrl && isActive) {
+  // If no active state is stored, default to active (true)
+  // This ensures the extension works when localStorage is cleared
+  const shouldBeActive = isActive === null ? true : isActive === 'true';
+  
+  if (shouldBeActive) {
     // Longer delay to ensure page is fully loaded and extension is ready
     setTimeout(() => {
       if (!ppOverlay) {
-        toggleOverlay();
+        createOverlay();
+        ppIsActive = true;
+        // Store active state
+        localStorage.setItem('pixelPerfectActive', 'true');
+        // Update toolbar icon to colored
+        chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('Error sending updateIcon message:', chrome.runtime.lastError);
+          }
+        });
+        
+        // Update favicon to show extension is active
+        updateFavicon(true);
       }
     }, 500);
   }
@@ -356,31 +393,31 @@ function toggleOverlay() {
     window.removeEventListener('resize', adjustOverlayPosition);
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
     
-      // Store inactive state
-  localStorage.setItem('pixelPerfectActive', 'false');
-  // Update toolbar icon to gray
-  chrome.runtime.sendMessage({ action: 'updateIcon', active: false }, (response) => {
-    if (chrome.runtime.lastError) {
-      console.error('Error sending updateIcon message:', chrome.runtime.lastError);
-    }
-  });
-  
-  // Restore original favicon
-  updateFavicon(false);
+    // Store inactive state
+    localStorage.setItem('pixelPerfectActive', 'false');
+    // Update toolbar icon to gray
+    chrome.runtime.sendMessage({ action: 'updateIcon', active: false }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error sending updateIcon message:', chrome.runtime.lastError);
+      }
+    });
+    
+    // Restore original favicon
+    updateFavicon(false);
   } else {
     createOverlay();
     ppIsActive = true;
-      // Store active state
-  localStorage.setItem('pixelPerfectActive', 'true');
-  // Update toolbar icon to colored
-  chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
-    if (chrome.runtime.lastError) {
-      console.error('Error sending updateIcon message:', chrome.runtime.lastError);
-    }
-  });
-  
-  // Update favicon to show extension is active
-  updateFavicon(true);
+    // Store active state
+    localStorage.setItem('pixelPerfectActive', 'true');
+    // Update toolbar icon to colored
+    chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error sending updateIcon message:', chrome.runtime.lastError);
+      }
+    });
+    
+    // Update favicon to show extension is active
+    updateFavicon(true);
   }
 }
 
@@ -391,8 +428,35 @@ function createOverlay() {
   ppIframe = document.createElement('iframe');
   // Check for stored URL or use default
   const iframeStoredUrl = localStorage.getItem('pixelPerfectUrl');
-  const baseUrl = iframeStoredUrl || 'http://localhost:3000/';
-  ppIframe.src = baseUrl;
+  let iframeUrl = iframeStoredUrl || 'http://localhost:3000/';
+  
+  // Check if Sync URL Path is enabled for iframe
+  const iframeSyncUrlPathEnabled = localStorage.getItem('pixelPerfectSyncUrlPath') === 'true';
+  if (iframeSyncUrlPathEnabled) {
+    // Get current page URL path
+    const currentUrl = window.location.href;
+    const currentPath = new URL(currentUrl).pathname;
+    
+    // Parse the iframe URL to get domain and port
+    try {
+      const iframeUrlObj = new URL(iframeUrl);
+      // Update the path while keeping domain and port
+      iframeUrlObj.pathname = currentPath;
+      iframeUrl = iframeUrlObj.href;
+    } catch (e) {
+      // If iframeUrl is not a valid URL, try to construct it
+      if (iframeUrl.includes('localhost')) {
+        const portMatch = iframeUrl.match(/localhost:(\d+)/);
+        const port = portMatch ? portMatch[1] : '3000';
+        iframeUrl = `http://localhost:${port}${currentPath}`;
+      } else {
+        // Fallback to localhost:3000 with current path
+        iframeUrl = `http://localhost:3000${currentPath}`;
+      }
+    }
+  }
+  
+  ppIframe.src = iframeUrl;
   ppIframe.id = 'overlay-iframe';
   ppIframe.style.height = document.body.scrollHeight + 'px';
   ppIframe.style.pointerEvents = 'none';
@@ -418,6 +482,7 @@ function createOverlay() {
   
   ppControls = document.createElement('div');
   ppControls.id = 'controls';
+  ppControls.classList.add('bottom'); // Default to bottom positioning
 
   const ppIcon = document.createElement('div');
   ppIcon.id = 'pixel-perfect-icon';
@@ -433,7 +498,35 @@ function createOverlay() {
   urlInput.placeholder = 'Enter localhost URL';
   // Set input value to stored URL or default
   const inputStoredUrl = localStorage.getItem('pixelPerfectUrl');
-  urlInput.value = inputStoredUrl || 'http://localhost:3000/';
+  let inputUrl = inputStoredUrl || 'http://localhost:3000/';
+  
+  // Check if Sync URL Path is enabled
+  const syncUrlPathEnabled = localStorage.getItem('pixelPerfectSyncUrlPath') === 'true';
+  if (syncUrlPathEnabled) {
+    // Get current page URL path
+    const currentUrl = window.location.href;
+    const currentPath = new URL(currentUrl).pathname;
+    
+    // Parse the base URL to get domain and port
+    try {
+      const inputUrlObj = new URL(inputUrl);
+      // Update the path while keeping domain and port
+      inputUrlObj.pathname = currentPath;
+      inputUrl = inputUrlObj.href;
+    } catch (e) {
+      // If inputUrl is not a valid URL, try to construct it
+      if (inputUrl.includes('localhost')) {
+        const portMatch = inputUrl.match(/localhost:(\d+)/);
+        const port = portMatch ? portMatch[1] : '3000';
+        inputUrl = `http://localhost:${port}${currentPath}`;
+      } else {
+        // Fallback to localhost:3000 with current path
+        inputUrl = `http://localhost:3000${currentPath}`;
+      }
+    }
+  }
+  
+  urlInput.value = inputUrl;
   urlInput.id = 'url-input';
   urlInput.title = 'Enter the URL for the overlay';
 
@@ -547,7 +640,10 @@ function createOverlay() {
   
   const toggleInput = document.createElement('input');
   toggleInput.type = 'checkbox';
-  toggleInput.checked = true; // Start as ON
+  
+  // Restore toggle state from localStorage or default to ON
+  const savedToggleState = localStorage.getItem('pixelPerfectOn');
+  toggleInput.checked = savedToggleState !== 'false'; // Default to true (ON) unless explicitly set to false
   
   const toggleSlider = document.createElement('span');
   toggleSlider.className = 'slider round';
@@ -732,27 +828,33 @@ function createOverlay() {
       const opacity = ppLastOpacityValue / 100;
       ppIframe.style.opacity = opacity;
       value.textContent = ppLastOpacityValue + '%';
+      
+      // Save toggle state to localStorage
+      localStorage.setItem('pixelPerfectOn', 'true');
     } else {
       // Store current opacity before turning off
       const currentLeft = parseFloat(sliderThumb.style.left) || 0;
       ppLastOpacityValue = Math.round(currentLeft);
       
-      // Hide overlay and disable all controls
+      // Hide overlay but keep controls visible and accessible
       ppOverlay.style.zIndex = '-999999';
       ppOverlay.style.opacity = '0';
       
-      // Disable all controls except close button and toggle switch
+      // Keep controls enabled but just disable the slider functionality
       sliderContainer.classList.add('disabled');
       sliderContainer.style.pointerEvents = 'none';
-      urlInput.disabled = true;
-      // invertBtn.disabled = true;
-      scrollModeSelect.disabled = true;
+      urlInput.disabled = false; // Keep URL input enabled
+      // invertBtn.disabled = false; // Keep invert button enabled
+      scrollModeSelect.disabled = false; // Keep scroll mode enabled
       
       // Move slider to 0 and set 50% opacity for OFF state
       sliderThumb.style.left = '0%';
       sliderFill.style.width = '0%';
       ppIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
+      
+      // Save toggle state to localStorage
+      localStorage.setItem('pixelPerfectOn', 'false');
     }
   });
 
@@ -890,6 +992,30 @@ function createOverlay() {
     localStorage.setItem('pixelPerfectDarkTheme', 'true');
   }
   
+  // Sync URL path setting
+  const syncUrlPathOption = document.createElement('div');
+  syncUrlPathOption.className = 'settings-option';
+  syncUrlPathOption.innerHTML = `
+    <span class="settings-text">Sync URL path</span>
+    <label class="switch">
+      <input type="checkbox" id="sync-url-path-toggle">
+      <span class="slider round"></span>
+    </label>
+  `;
+  
+  settingsMenu.appendChild(syncUrlPathOption);
+  
+  // Set default sync URL path state
+  const syncUrlPathToggle = syncUrlPathOption.querySelector('#sync-url-path-toggle');
+  const savedSyncUrlPath = localStorage.getItem('pixelPerfectSyncUrlPath');
+  if (savedSyncUrlPath !== null) {
+    syncUrlPathToggle.checked = savedSyncUrlPath === 'true';
+  } else {
+    // Default to disabled
+    syncUrlPathToggle.checked = false;
+    localStorage.setItem('pixelPerfectSyncUrlPath', 'false');
+  }
+  
 
   
   // Add settings menu to controls
@@ -957,6 +1083,12 @@ function createOverlay() {
         ppControls.classList.add('light-theme');
         ppControls.classList.remove('dark-theme');
       }
+    } else if (e.target.id === 'sync-url-path-toggle') {
+      const isSyncEnabled = e.target.checked;
+      localStorage.setItem('pixelPerfectSyncUrlPath', isSyncEnabled.toString());
+      
+      // TODO: Add sync URL path functionality here
+      console.log('Sync URL path:', isSyncEnabled ? 'enabled' : 'disabled');
     }
   });
   
@@ -1008,6 +1140,26 @@ function createOverlay() {
   ppControls.appendChild(settingsBtn);
   ppControls.appendChild(closeBtn);
   ppOverlay.appendChild(ppIframe);
+  
+  // Check toggle state and set overlay visibility accordingly
+  const overlayToggleState = localStorage.getItem('pixelPerfectOn');
+  const shouldShowOverlay = overlayToggleState !== 'false'; // Default to true unless explicitly false
+  
+  if (!shouldShowOverlay) {
+    // Hide overlay but keep controls visible
+    ppOverlay.style.zIndex = '-999999';
+    ppOverlay.style.opacity = '0';
+    
+    // Disable slider functionality but keep other controls enabled
+    sliderContainer.classList.add('disabled');
+    sliderContainer.style.pointerEvents = 'none';
+    
+    // Set slider to 0 and show OFF state
+    sliderThumb.style.left = '0%';
+    sliderFill.style.width = '0%';
+    ppIframe.style.opacity = '0.5';
+    value.textContent = 'OFF';
+  }
   
   // Add both overlay and controls as siblings to body
   document.body.appendChild(ppOverlay);

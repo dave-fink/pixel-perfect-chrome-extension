@@ -5,7 +5,8 @@
   "description": "Simultaneously overlay a local development page on top of any live site for precise, pixel-perfect comparison. Forget toggling tabs!",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "action": {
     "default_icon": {

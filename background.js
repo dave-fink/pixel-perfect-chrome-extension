@@ -64,7 +64,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       });
       
       const data = results[0]?.result;
-      if (data?.url && data?.active === 'true') {
+      console.log('Auto-injection check for tab', tabId, ':', data);
+      
+      if (data?.active === 'true') {
+        console.log('Auto-injecting content script for active extension');
         
         // Inject CSS and content script
         await chrome.scripting.insertCSS({
@@ -78,7 +81,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         });
         
         // Send message to auto-create overlay
-        await chrome.tabs.sendMessage(tabId, { action: "toggleOverlay" });
+        await chrome.tabs.sendMessage(tabId, { action: "autoCreateOverlay" });
+      } else {
+        console.log('Extension not active or no data found');
       }
     } catch (error) {
       // Only log errors that aren't about restricted URLs
