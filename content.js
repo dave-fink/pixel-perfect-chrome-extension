@@ -596,38 +596,7 @@ function createOverlay() {
     }
   });
 
-  // Add manual adjustment buttons
-  const leftBtn = document.createElement('button');
-  leftBtn.textContent = '←';
-  leftBtn.id = 'left-btn';
-  leftBtn.title = 'Shift overlay left';
-  
-  const adjustLeft = () => {
-    const currentLeft = parseInt(ppOverlay.style.left) || 0;
-    ppOverlay.style.left = (currentLeft - 1) + 'px';
-  };
-  
-  leftBtn.addEventListener('click', adjustLeft);
-  leftBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    adjustLeft();
-  }, { passive: false });
 
-  const rightBtn = document.createElement('button');
-  rightBtn.textContent = '→';
-  rightBtn.id = 'right-btn';
-  rightBtn.title = 'Shift overlay right';
-  
-  const adjustRight = () => {
-    const currentLeft = parseInt(ppOverlay.style.left) || 0;
-    ppOverlay.style.left = (currentLeft + 1) + 'px';
-  };
-  
-  rightBtn.addEventListener('click', adjustRight);
-  rightBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    adjustRight();
-  }, { passive: false });
 
 
   // URL handling with Enter key
@@ -1036,8 +1005,6 @@ function createOverlay() {
   ppControls.appendChild(value);
   ppControls.appendChild(invertBtn);
   ppControls.appendChild(scrollModeSelect);
-  ppControls.appendChild(leftBtn);
-  ppControls.appendChild(rightBtn);
   ppControls.appendChild(settingsBtn);
   ppControls.appendChild(closeBtn);
   ppOverlay.appendChild(ppIframe);
