@@ -13,6 +13,12 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.action.onClicked.addListener(async (tab) => {
   try {
+    // Skip chrome:// URLs and other restricted pages
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:') || tab.url.startsWith('edge://') || tab.url.startsWith('moz-extension://')) {
+      console.log('Extension cannot run on this page type:', tab.url);
+      return;
+    }
+    
     // Check if content script is already injected by trying to send a message
     try {
       await chrome.tabs.sendMessage(tab.id, { action: "ping" });

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Pixel Perfect Overlay",
   "version": "1.0",
-  "description": "A Chrome extension for pixel-perfect comparison with overlay functionality",
+  "description": "Simultaneously overlay a local development page on top of any live site for precise, pixel-perfect comparison. Forget toggling tabs!",
   "permissions": [
     "activeTab",
     "scripting"
@@ -15,12 +15,18 @@
       "128": "pixel-perfect.png"
     }
   },
+  "icons": {
+    "16": "pixel-perfect.png",
+    "32": "pixel-perfect.png",
+    "48": "pixel-perfect.png",
+    "128": "pixel-perfect.png"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "web_accessible_resources": [
     {
-      "resources": ["pixel-perfect-icon.png", "pixel-perfect-gray.png"],
+      "resources": ["pixel-perfect.png", "pixel-perfect-gray.png", "new-window.svg"],
       "matches": ["<all_urls>"]
     }
   ]

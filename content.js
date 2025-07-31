@@ -14,7 +14,87 @@ let ppLastOpacityValue = 100;
 let ppScrollMode = 'both'; // 'both', 'original', 'overlay'
 let ppIsActive = false; // Track if extension is active
 
-// Function to detect webpage content boundaries
+// Favicon management
+let originalFavicon = null;
+
+function updateFavicon(isActive) {
+  console.log('updateFavicon called with isActive:', isActive);
+  
+  // Store original favicon on first call
+  if (!originalFavicon) {
+    const existingFavicon = document.querySelector('link[rel="icon"]') || 
+                            document.querySelector('link[rel="shortcut icon"]');
+    originalFavicon = existingFavicon ? existingFavicon.href : null;
+    console.log('Original favicon stored:', originalFavicon);
+  }
+  
+  if (isActive) {
+    console.log('Creating favicon overlay...');
+    
+    // Create canvas for favicon overlay
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 32;
+    canvas.height = 32;
+    
+    // Load original favicon
+    const originalFaviconImg = new Image();
+    originalFaviconImg.crossOrigin = 'anonymous';
+    originalFaviconImg.onload = () => {
+      // Draw original favicon
+      ctx.drawImage(originalFaviconImg, 0, 0, 32, 32);
+      
+      // Load extension icon
+      const extensionIcon = new Image();
+      extensionIcon.crossOrigin = 'anonymous';
+      extensionIcon.onload = () => {
+        // Draw extension icon in bottom-right corner (20x20)
+        ctx.drawImage(extensionIcon, 12, 12, 20, 20);
+        
+        // Convert canvas to data URL and create favicon link
+        const overlayFavicon = canvas.toDataURL();
+        
+        // Remove all existing favicon links
+        const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+        existingFavicons.forEach(favicon => {
+          favicon.remove();
+        });
+        
+        // Create new favicon link with overlay
+        const newFavicon = document.createElement('link');
+        newFavicon.rel = 'icon';
+        newFavicon.href = overlayFavicon;
+        newFavicon.id = 'pixel-perfect-favicon';
+        
+        document.head.appendChild(newFavicon);
+        console.log('Overlay favicon added to head');
+      };
+      extensionIcon.src = chrome.runtime.getURL('pixel-perfect.png');
+    };
+    originalFaviconImg.src = originalFavicon;
+    
+  } else {
+    console.log('Restoring original favicon...');
+    
+    // Remove extension favicon
+    const extensionFavicon = document.getElementById('pixel-perfect-favicon');
+    if (extensionFavicon) {
+      extensionFavicon.remove();
+      console.log('Extension favicon removed');
+    }
+    
+    // Restore original favicon by recreating the link
+    if (originalFavicon) {
+      const originalFaviconLink = document.createElement('link');
+      originalFaviconLink.rel = 'icon';
+      originalFaviconLink.href = originalFavicon;
+      document.head.appendChild(originalFaviconLink);
+      console.log('Original favicon restored:', originalFavicon);
+    }
+  }
+}
+
+  // Function to detect webpage content boundaries
 function detectContentBoundaries() {
   // Look for common content containers
   const selectors = [
@@ -276,25 +356,31 @@ function toggleOverlay() {
     window.removeEventListener('resize', adjustOverlayPosition);
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
     
-    // Store inactive state
-    localStorage.setItem('pixelPerfectActive', 'false');
-    // Update toolbar icon to gray
-    chrome.runtime.sendMessage({ action: 'updateIcon', active: false }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error sending updateIcon message:', chrome.runtime.lastError);
-      }
-    });
+      // Store inactive state
+  localStorage.setItem('pixelPerfectActive', 'false');
+  // Update toolbar icon to gray
+  chrome.runtime.sendMessage({ action: 'updateIcon', active: false }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error sending updateIcon message:', chrome.runtime.lastError);
+    }
+  });
+  
+  // Restore original favicon
+  updateFavicon(false);
   } else {
     createOverlay();
     ppIsActive = true;
-    // Store active state
-    localStorage.setItem('pixelPerfectActive', 'true');
-    // Update toolbar icon to colored
-    chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error sending updateIcon message:', chrome.runtime.lastError);
-      }
-    });
+      // Store active state
+  localStorage.setItem('pixelPerfectActive', 'true');
+  // Update toolbar icon to colored
+  chrome.runtime.sendMessage({ action: 'updateIcon', active: true }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error sending updateIcon message:', chrome.runtime.lastError);
+    }
+  });
+  
+  // Update favicon to show extension is active
+  updateFavicon(true);
   }
 }
 
@@ -305,7 +391,8 @@ function createOverlay() {
   ppIframe = document.createElement('iframe');
   // Check for stored URL or use default
   const iframeStoredUrl = localStorage.getItem('pixelPerfectUrl');
-  ppIframe.src = iframeStoredUrl || 'http://localhost:3000/';
+  const baseUrl = iframeStoredUrl || 'http://localhost:3000/';
+  ppIframe.src = baseUrl;
   ppIframe.id = 'overlay-iframe';
   ppIframe.style.height = document.body.scrollHeight + 'px';
   ppIframe.style.pointerEvents = 'none';
@@ -350,15 +437,26 @@ function createOverlay() {
   urlInput.id = 'url-input';
   urlInput.title = 'Enter the URL for the overlay';
 
-  const goButton = document.createElement('button');
-  goButton.innerHTML = '→';
-  goButton.id = 'go-button';
-  goButton.title = 'Go to URL';
-  goButton.style.position = 'absolute';
-  goButton.style.right = '8px';
-  goButton.style.top = '50%';
-  goButton.style.transform = 'translateY(-50%)';
-  goButton.style.zIndex = '1';
+
+  
+  // Add open overlay button
+  const openOverlayUrl = document.createElement('button');
+  openOverlayUrl.innerHTML = `
+    <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 358.05 355.34">
+      <path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/>
+      <path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/>
+    </svg>
+  `;
+  openOverlayUrl.id = 'open-overlay-url';
+  openOverlayUrl.title = 'Open overlay in new tab';
+  
+  openOverlayUrl.addEventListener('click', () => {
+    if (ppIframe && ppIframe.src) {
+      // Remove the cache buster for the new tab
+      const baseUrl = ppIframe.src.split('?')[0];
+      window.open(baseUrl, '_blank');
+    }
+  });
 
   const sliderContainer = document.createElement('div');
   sliderContainer.id = 'opacity-slider';
@@ -397,7 +495,7 @@ function createOverlay() {
   const buttonStoredInverted = localStorage.getItem('pixelPerfectInverted');
   if (buttonStoredInverted === 'true') {
     ppIsInverted = true;
-    invertBtn.textContent = 'Normal';
+    invertBtn.classList.add('active');
   }
 
   // Add scroll mode custom dropdown
@@ -442,10 +540,10 @@ function createOverlay() {
   scrollModeSelect.appendChild(scrollModeDropdown);
 
   // Add on/off toggle switch
-  const toggleSwitch = document.createElement('label');
-  toggleSwitch.className = 'switch';
-  toggleSwitch.title = 'Toggle overlay on/off';
-  toggleSwitch.style.marginRight = '8px';
+  const onOffToggle = document.createElement('label');
+  onOffToggle.id = 'on-off-toggle';
+  onOffToggle.title = 'Toggle overlay on/off';
+  onOffToggle.style.marginRight = '8px';
   
   const toggleInput = document.createElement('input');
   toggleInput.type = 'checkbox';
@@ -454,8 +552,22 @@ function createOverlay() {
   const toggleSlider = document.createElement('span');
   toggleSlider.className = 'slider round';
   
-  toggleSwitch.appendChild(toggleInput);
-  toggleSwitch.appendChild(toggleSlider);
+  onOffToggle.appendChild(toggleInput);
+  onOffToggle.appendChild(toggleSlider);
+  
+  // Add on/off class based on toggle state
+  const updateControlsClass = () => {
+    if (ppControls) {
+      ppControls.classList.remove('on', 'off');
+      ppControls.classList.add(toggleInput.checked ? 'on' : 'off');
+    }
+  };
+  
+  // Set initial class
+  updateControlsClass();
+  
+  // Update class when toggle changes
+  toggleInput.addEventListener('change', updateControlsClass);
 
   // Add settings button (burger icon)
   const settingsBtn = document.createElement('button');
@@ -468,6 +580,21 @@ function createOverlay() {
   closeBtn.textContent = '×';
   closeBtn.id = 'close-btn';
   closeBtn.title = 'Close overlay';
+  
+  // Add open overlay button
+  const openOverlay = document.createElement('button');
+  openOverlay.innerHTML = `
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+  openOverlay.id = 'open-overlay';
+  openOverlay.title = 'Open overlay in new tab for inspection';
+  openOverlay.addEventListener('click', () => {
+    if (ppIframe && ppIframe.src) {
+      window.open(ppIframe.src, '_blank');
+    }
+  });
 
   // Add manual adjustment buttons
   const leftBtn = document.createElement('button');
@@ -484,7 +611,7 @@ function createOverlay() {
   leftBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     adjustLeft();
-  });
+  }, { passive: false });
 
   const rightBtn = document.createElement('button');
   rightBtn.textContent = '→';
@@ -500,19 +627,15 @@ function createOverlay() {
   rightBtn.addEventListener('touchstart', (e) => {
     e.preventDefault();
     adjustRight();
-  });
+  }, { passive: false });
 
 
-  // URL handling with Go button and page reload
-  goButton.addEventListener('click', function() {
-    // Store URL in localStorage and reload page to bypass CSP
-    localStorage.setItem('pixelPerfectUrl', urlInput.value);
-    window.location.reload();
-  });
-
+  // URL handling with Enter key
   urlInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
-      goButton.click();
+      // Store URL in localStorage and reload page to bypass CSP
+      localStorage.setItem('pixelPerfectUrl', urlInput.value);
+      window.location.reload();
     }
   });
 
@@ -539,8 +662,8 @@ function createOverlay() {
     const touch = e.touches[0];
     sliderStartX = touch.clientX;
     sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
-    document.addEventListener('touchmove', onSliderTouchMove);
-    document.addEventListener('touchend', onSliderTouchEnd);
+    document.addEventListener('touchmove', onSliderTouchMove, { passive: false });
+    document.addEventListener('touchend', onSliderTouchEnd, { passive: false });
   });
   
   sliderContainer.addEventListener('click', function(e) {
@@ -570,7 +693,7 @@ function createOverlay() {
       sliderFill.style.width = clampedPercentage + '%';
       updateOpacity(clampedPercentage);
     }
-  });
+  }, { passive: false });
   
   function onSliderMouseMove(e) {
     if (!isSliderDragging) return;
@@ -631,8 +754,7 @@ function createOverlay() {
       sliderContainer.classList.remove('disabled');
       sliderContainer.style.pointerEvents = 'auto';
       urlInput.disabled = false;
-      goButton.disabled = false;
-      invertBtn.disabled = false;
+      // invertBtn.disabled = false;
       scrollModeSelect.disabled = false;
       
       // Restore last opacity
@@ -654,12 +776,12 @@ function createOverlay() {
       sliderContainer.classList.add('disabled');
       sliderContainer.style.pointerEvents = 'none';
       urlInput.disabled = true;
-      goButton.disabled = true;
-      invertBtn.disabled = true;
+      // invertBtn.disabled = true;
       scrollModeSelect.disabled = true;
       
       // Move slider to 0 and set 50% opacity for OFF state
-      slider.value = '0';
+      sliderThumb.style.left = '0%';
+      sliderFill.style.width = '0%';
       ppIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
     }
@@ -671,11 +793,11 @@ function createOverlay() {
     if (ppIsInverted) {
       ppIframe.style.filter = 'invert(1)';
       ppIframe.style.backgroundColor = 'white'; // Add white background for inversion
-      invertBtn.textContent = 'Normal';
+      this.classList.add('active');
     } else {
       ppIframe.style.filter = 'none';
       ppIframe.style.backgroundColor = 'transparent'; // Remove any background
-      invertBtn.textContent = 'Invert';
+      this.classList.remove('active');
     }
     
     // Save invert setting to localStorage
@@ -905,11 +1027,11 @@ function createOverlay() {
 
   // Add elements to URL container
   urlContainer.appendChild(urlInput);
-  urlContainer.appendChild(goButton);
 
   ppControls.appendChild(ppIcon);
-  ppControls.appendChild(toggleSwitch);
+  ppControls.appendChild(onOffToggle);
   ppControls.appendChild(urlContainer);
+  ppControls.appendChild(openOverlayUrl);
   ppControls.appendChild(sliderContainer);
   ppControls.appendChild(value);
   ppControls.appendChild(invertBtn);
