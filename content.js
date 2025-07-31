@@ -710,11 +710,7 @@ function createOverlay() {
   
   settingsMenu.appendChild(dockOption);
   
-  // Set default active state for bottom button
-  const bottomBtn = dockOption.querySelector('.dock-btn[data-position="bottom"]');
-  if (bottomBtn) {
-    bottomBtn.classList.add('active');
-  }
+
   
   // dark theme setting
   const darkThemeOption = document.createElement('div');
@@ -753,7 +749,13 @@ function createOverlay() {
   
   // Close settings menu when clicking outside
   document.addEventListener('click', function(e) {
-    if (!ppControls.contains(e.target)) {
+    // Don't close if clicking on the settings button itself
+    if (e.target === settingsBtn || settingsBtn.contains(e.target)) {
+      return;
+    }
+    
+    // Close if clicking outside the settings menu
+    if (!settingsMenu.contains(e.target)) {
       settingsMenu.style.display = 'none';
     }
   });
@@ -774,14 +776,6 @@ function createOverlay() {
     
     // Save dock position to localStorage
     localStorage.setItem('pixelPerfectDockPosition', position);
-    
-    // Update dock button states
-    document.querySelectorAll('.dock-btn').forEach(btn => {
-      btn.classList.remove('active');
-      if (btn.dataset.position === position) {
-        btn.classList.add('active');
-      }
-    });
   }
   
   // Add dock button event listeners
