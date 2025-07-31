@@ -400,28 +400,46 @@ function createOverlay() {
     invertBtn.textContent = 'Normal';
   }
 
-  // Add scroll mode dropdown
-  const scrollModeSelect = document.createElement('select');
+  // Add scroll mode custom dropdown
+  const scrollModeSelect = document.createElement('div');
   scrollModeSelect.id = 'scroll-mode-select';
   scrollModeSelect.title = 'Select scroll mode';
   
-  // Create options for the dropdown
-  const bothOption = document.createElement('option');
-  bothOption.value = 'both';
-  bothOption.textContent = 'Scroll Both';
-  bothOption.selected = true;
+  // Create text span for the button
+  const buttonText = document.createElement('span');
+  buttonText.textContent = 'Scroll Both';
+  scrollModeSelect.appendChild(buttonText);
   
-  const originalOption = document.createElement('option');
-  originalOption.value = 'original';
-  originalOption.textContent = 'Scroll Page';
+  // Create custom dropdown
+  const scrollModeDropdown = document.createElement('div');
+  scrollModeDropdown.id = 'scroll-mode-dropdown';
   
-  const overlayOption = document.createElement('option');
-  overlayOption.value = 'overlay';
-  overlayOption.textContent = 'Scroll Overlay';
+  // Create dropdown options
+  const options = [
+    { value: 'both', text: 'Scroll Both', selected: true },
+    { value: 'original', text: 'Scroll Page', selected: false },
+    { value: 'overlay', text: 'Scroll Overlay', selected: false }
+  ];
   
-  scrollModeSelect.appendChild(bothOption);
-  scrollModeSelect.appendChild(originalOption);
-  scrollModeSelect.appendChild(overlayOption);
+  options.forEach(option => {
+    const optionElement = document.createElement('div');
+    optionElement.className = `dropdown-option ${option.selected ? 'selected' : ''}`;
+    optionElement.dataset.value = option.value;
+    
+    const checkmark = document.createElement('span');
+    checkmark.className = 'checkmark';
+    checkmark.textContent = option.selected ? '✓' : '';
+    
+    const text = document.createElement('span');
+    text.textContent = option.text;
+    
+    optionElement.appendChild(checkmark);
+    optionElement.appendChild(text);
+    scrollModeDropdown.appendChild(optionElement);
+  });
+  
+  // Add dropdown to select button
+  scrollModeSelect.appendChild(scrollModeDropdown);
 
   // Add on/off toggle switch
   const toggleSwitch = document.createElement('label');
@@ -664,31 +682,76 @@ function createOverlay() {
     localStorage.setItem('pixelPerfectInverted', ppIsInverted.toString());
   });
 
-  // Add scroll mode dropdown functionality
-  scrollModeSelect.addEventListener('change', function() {
-    const newMode = this.value;
-    ppScrollMode = newMode;
+  // Add scroll mode custom dropdown functionality
+  scrollModeSelect.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = this.querySelector('#scroll-mode-dropdown');
+    const isVisible = dropdown.classList.contains('show');
     
-    if (newMode === 'both') {
-      // Both scroll together - sync iframe with current page scroll
-      const mainScrollY = window.scrollY;
-      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    } else if (newMode === 'original') {
-      // Only original page scrolls - keep iframe at current position
-      const currentTransform = ppIframe.style.transform;
-      const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
-      ppIframe.style.transform = `translateY(${currentY}px)`;
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    } else if (newMode === 'overlay') {
-      // Only iframe scrolls - fix main page scroll position
-      ppIframe.dataset.mainPageScrollY = window.scrollY.toString();
-      // Calculate scrollbar width and compensate to prevent layout jump
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = scrollbarWidth + 'px';
+    // Close all other dropdowns
+    document.querySelectorAll('#scroll-mode-dropdown.show').forEach(d => {
+      if (d !== dropdown) d.classList.remove('show');
+    });
+    
+    // Toggle this dropdown
+    dropdown.classList.toggle('show');
+  });
+  
+  // Handle dropdown option clicks
+  scrollModeDropdown.addEventListener('click', function(e) {
+    // Find the dropdown option that was clicked (could be the target or a parent)
+    const dropdownOption = e.target.closest('.dropdown-option');
+    
+    if (dropdownOption) {
+      e.stopPropagation(); // Prevent event from bubbling up to button click
+      
+      const newMode = dropdownOption.dataset.value;
+      ppScrollMode = newMode;
+      
+      // Update button text
+      const buttonText = scrollModeSelect.querySelector('span');
+      buttonText.textContent = dropdownOption.querySelector('span:last-child').textContent;
+      
+      // Update selected state
+      this.querySelectorAll('.dropdown-option').forEach(option => {
+        option.classList.remove('selected');
+        option.querySelector('.checkmark').textContent = '';
+      });
+      dropdownOption.classList.add('selected');
+      dropdownOption.querySelector('.checkmark').textContent = '✓';
+      
+      // Close dropdown
+      this.classList.remove('show');
+      
+      // Apply scroll mode
+      if (newMode === 'both') {
+        // Both scroll together - sync iframe with current page scroll
+        const mainScrollY = window.scrollY;
+        ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      } else if (newMode === 'original') {
+        // Only original page scrolls - keep iframe at current position
+        const currentTransform = ppIframe.style.transform;
+        const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
+        ppIframe.style.transform = `translateY(${currentY}px)`;
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      } else if (newMode === 'overlay') {
+        // Only iframe scrolls - fix main page scroll position
+        ppIframe.dataset.mainPageScrollY = window.scrollY.toString();
+        // Calculate scrollbar width and compensate to prevent layout jump
+        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+        document.body.style.overflow = 'hidden';
+        document.body.style.paddingRight = scrollbarWidth + 'px';
+      }
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!scrollModeSelect.contains(e.target)) {
+      scrollModeDropdown.classList.remove('show');
     }
   });
 

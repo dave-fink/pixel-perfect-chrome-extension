@@ -17,24 +17,25 @@
 }
 
 #controls {
+  --border-radius: 12px;
+  --blue: #0075ff;
+  --height: 50px;
+
   &.dark-theme {
     --background: rgba(69, 69, 69, 0.9);
     --dark-background: #353535;
     --text-color: #e0e0e0;
     --border-color: #555555;
-    --border-radius: 12px;
-    --blue: #0075ff;
-    --height: 50px;
   }
+
   &.light-theme {
     --background: rgba(245, 245, 245, 0.95);
     --dark-background: #e0e0e0;
     --text-color: #333333;
     --border-color: #d0d0d0;
-    --border-radius: 12px;
-    --blue: #0075ff;
-    --height: 50px;
   }
+
+
 
   position: fixed;
   left: 50%;
@@ -59,6 +60,19 @@
 
   &.top { top: 30px }
   &.bottom { bottom: 30px }
+
+  @media (width < 830px) {
+    --border-radius: 0;
+    --height: 40px;
+
+    width: 100%;
+    border-radius: 0;
+    left: 0;
+    transform: none;
+
+    &.top { top: 0; }
+    &.bottom { bottom: 0; }
+  }
   
   * {
     margin: 0;
@@ -71,7 +85,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 8px;
     padding: 0 8px;
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAACbUlEQVRYhe2XX0hTURzHP7tZuba2OWN7yj/FEiFGimGyipLQHvoDdxQkJYGjXnpqSBBCFApCUpD0ENhLQUVxH6R6WTAqGiU+mEnorLlyRVQEmvtTOVgPi+ua290mWyPw+/Q7v3N/v9/nnHvO4RxVLBbDbrfXAb3ADkBNYRUGngFnJEl6qRJFse6PY02BCycrBGwXgJ4iFAfQAD0C8WkvlnYKgLaIANoSpd5gqZVxY1vGLMZf7ykPv8IQ9uRMoAgQFdYSUFsyJgmoLaDfQ9v6Fo5UOpmciOIZMmQFIGT1VZa6FdjMZe9NTp74QO/5YQz6aMYYxRlI1mjHqUW+4E8jL/w2nJ5WANxfTVx7coXTLXu52D1LZ9cuZmbTl8kJwFpxVbYv9Tcn9HhwaD8xEDwOgNPTytFtzZjK3Dja39DXX5sfgEQt/sf30VUe4HuJEYC3n22YdG6aGsepGqzm3XRpyjx5XQP6+W+y7f24QbZrLHNpY/IKkKi50EJqsylSeIAfK6v+2rLVxrGs4vIG4C1vl20NEfY39clt35QubVxOi/De8IBsT5etA2B+hQa/pl5efADntkiyHYmsUjyUcgI4/KBjoWFM/c2FehedB4/JbZfbqphzydswWZs0Ibp33+HQVofsez5Uy43bFfkDuLvvekp/jXmEjeZHaFZPAvFpd7mtGYvnDJA4usGHDbLt/wL+MR3QgG9Kx+sJreLxu2SARGUzumxUsINoGWAZ4L8BUNyGhrAH0Re/6doaZwoCoBJFMURxXkYAQQF4XKTiAE8FoIv4i/VfKwycFSRJGiH+PnQB6e9O+S3sAmySJI3+BlQipXqPcB8NAAAAAElFTkSuQmCC');
     background-size: 24px 24px;
@@ -97,6 +110,10 @@
     font-size: 11px;
     line-height: 11px;
     color: var(--text-color);
+
+    @media (width < 830px) {
+      width: 100%;
+    }
 
     &:focus {
       outline: none;
@@ -240,13 +257,15 @@
   }
 
   #scroll-mode-select {
+    position: relative;
     width: auto;
-    height: 28px;
-    padding: 4px 12px;
+    padding: 6px 12px;
+    white-space: nowrap;
     box-sizing: border-box;
     background: var(--background);
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    text-align: center;
     outline: none;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 11px;
@@ -255,6 +274,7 @@
     cursor: pointer;
     user-select: none;
     transition: all 0.2s ease;
+
 
     &:hover {
       border-color: var(--blue);
@@ -270,12 +290,84 @@
       color: #666;
       border-color: #444;
     }
+
+  }
+  
+  #scroll-mode-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    z-index: 1000002;
+    display: none;
+    margin-top: 4px;
+    min-width: max-content;
     
-    & option {
-      background: #1a1a1a;
-      color: #e0e0e0;
-      padding: 4px;
-    }    
+    &.show {
+      display: block;
+    }
+    
+    .dropdown-option {
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      
+      &:hover {
+        background: var(--dark-background);
+      }
+      
+      &.selected {
+        background: var(--blue);
+        color: white;
+      }
+      
+      .checkmark {
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        flex-shrink: 0;
+      }
+    }
+    
+    /* Position based on dock */
+    .top & {
+      top: 100%;
+      bottom: auto;
+      margin-top: 4px;
+      margin-bottom: 0;
+    }
+    
+    .bottom & {
+      top: auto;
+      bottom: 100%;
+      margin-top: 0;
+      margin-bottom: 4px;
+    }
+    
+    @media (width < 830px) {
+      .dropdown-option {
+        padding: 8px 12px;
+        font-size: 14px;
+        
+        .checkmark {
+          width: 18px;
+          height: 18px;
+          font-size: 14px;
+        }
+      }
+    }
   }
   
 
@@ -302,7 +394,7 @@
   }
   
   #settings-btn {
-    width: 40px;
+    width: 30px;
     height: var(--height);
     display: flex;
     align-items: center;
@@ -412,12 +504,16 @@
     &:hover {
       opacity: .8;
     }
+    @media (width < 830px) {
+      border-radius: 0;
+    }
   }
   
   .switch {
     position: relative;
     display: inline-block;
     width: 40px;
+    min-width: 40px;
     height: 20px;
 
     input {
