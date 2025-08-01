@@ -1,3 +1,38 @@
+// TODO: Iframe ERROR Handling
+// When toggling sync iframe - check if current page matches url - otherwise reload page
+// open in new tab
+
+
+// DOM Helper Functions
+function domEl(tag, ...items) {
+  const element = document.createElement(tag);
+  if (!items?.length) return element;
+  
+  const [first, ...rest] = items;
+  if (first && typeof first === 'object' && !(first instanceof Element)) {
+    Object.entries(first).forEach(([key, value]) => 
+      key.startsWith('on') 
+        ? element.addEventListener(key.slice(2).toLowerCase(), value)
+        : element.setAttribute(key, Array.isArray(value) ? value.join(' ') : value)
+    );
+    items = rest;
+  }
+  
+  items.forEach(item => item != null && element.appendChild(
+    item instanceof Element ? item : document.createTextNode(item)
+  ));
+  
+  return element;
+}
+
+// Element helper functions
+function div(...items) { return domEl('div', ...items); }
+function span(...items) { return domEl('span', ...items); }
+function label(...items) { return domEl('label', ...items); }
+function input(...items) { return domEl('input', ...items); }
+function button(...items) { return domEl('button', ...items); }
+function link(...items) { return domEl('link', ...items); }
+
 // Check if content script is already running
 if (window.pixelPerfectScriptLoaded) {
   // Exit early to prevent duplicate scripts
@@ -61,10 +96,11 @@ function updateFavicon(isActive) {
         });
         
         // Create new favicon link with overlay
-        const newFavicon = document.createElement('link');
-        newFavicon.rel = 'icon';
-        newFavicon.href = overlayFavicon;
-        newFavicon.id = 'pixel-perfect-favicon';
+        const newFavicon = link({ 
+          rel: 'icon',
+          href: overlayFavicon,
+          id: 'pixel-perfect-favicon'
+        });
         
         document.head.appendChild(newFavicon);
         console.log('Overlay favicon added to head');
@@ -85,9 +121,10 @@ function updateFavicon(isActive) {
     
     // Restore original favicon by recreating the link
     if (originalFavicon) {
-      const originalFaviconLink = document.createElement('link');
-      originalFaviconLink.rel = 'icon';
-      originalFaviconLink.href = originalFavicon;
+      const originalFaviconLink = link({ 
+        rel: 'icon',
+        href: originalFavicon
+      });
       document.head.appendChild(originalFaviconLink);
       console.log('Original favicon restored:', originalFavicon);
     }
@@ -422,10 +459,6 @@ function toggleOverlay() {
 }
 
 function createOverlay() {
-  ppOverlay = document.createElement('div');
-  ppOverlay.id = 'overlay';
-
-  ppIframe = document.createElement('iframe');
   // Check for stored URL or use default
   const iframeStoredUrl = localStorage.getItem('pixelPerfectUrl');
   let iframeUrl = iframeStoredUrl || 'http://localhost:3000/';
@@ -456,6 +489,8 @@ function createOverlay() {
     }
   }
   
+  ppOverlay = div({ id: 'overlay' });
+  ppIframe = domEl('iframe');
   ppIframe.src = iframeUrl;
   ppIframe.id = 'overlay-iframe';
   ppIframe.style.height = document.body.scrollHeight + 'px';
@@ -480,22 +515,13 @@ function createOverlay() {
     ppLastOpacityValue = parseInt(iframeStoredOpacity);
   }
   
-  ppControls = document.createElement('div');
-  ppControls.id = 'controls';
-  ppControls.classList.add('bottom'); // Default to bottom positioning
+  ppControls = div({ id: 'controls', class: 'bottom' }); // Default to bottom positioning
 
-  const ppIcon = document.createElement('div');
-  ppIcon.id = 'pixel-perfect-icon';
+  const ppIcon = div({ id: 'pixel-perfect-icon' });
 
   // Create URL input container
-  const urlContainer = document.createElement('div');
-  urlContainer.id = 'url-container';
-  urlContainer.style.position = 'relative';
-  urlContainer.style.display = 'inline-block';
+  const urlContainer = div({ id: 'url-container' });
 
-  const urlInput = document.createElement('input');
-  urlInput.type = 'text';
-  urlInput.placeholder = 'Enter localhost URL';
   // Set input value to stored URL or default
   const inputStoredUrl = localStorage.getItem('pixelPerfectUrl');
   let inputUrl = inputStoredUrl || 'http://localhost:3000/';
@@ -526,22 +552,27 @@ function createOverlay() {
     }
   }
   
-  urlInput.value = inputUrl;
-  urlInput.id = 'url-input';
-  urlInput.title = 'Enter the URL for the overlay';
+  const urlInput = input({ 
+    id: 'url-input',
+    type: 'text', 
+    placeholder: 'Enter overlay URL', 
+    value: inputUrl,
+    title: 'Overlay URL'
+  });
 
 
   
   // Add open overlay button
-  const openOverlayUrl = document.createElement('button');
-  openOverlayUrl.innerHTML = `
-    <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 358.05 355.34">
-      <path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/>
-      <path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/>
-    </svg>
-  `;
-  openOverlayUrl.id = 'open-overlay-url';
-  openOverlayUrl.title = 'Open overlay in new tab';
+  const openOverlayUrl = div({ 
+    id: 'open-overlay-url', 
+    title: 'Open overlay in new tab',
+    innerHTML: `
+      <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 358.05 355.34">
+        <path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/>
+        <path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/>
+      </svg>
+    `
+  });
   
   openOverlayUrl.addEventListener('click', () => {
     if (ppIframe && ppIframe.src) {
@@ -551,38 +582,27 @@ function createOverlay() {
     }
   });
 
-  const sliderContainer = document.createElement('div');
-  sliderContainer.id = 'opacity-slider';
-  
-  const sliderTrack = document.createElement('div');
-  sliderTrack.id = 'slider-track';
-  
-  const sliderFill = document.createElement('div');
-  sliderFill.id = 'slider-fill';
-  
-  const sliderThumb = document.createElement('div');
-  sliderThumb.id = 'slider-thumb';
-  
   // Get stored opacity value or default to 100
   const storedOpacity = localStorage.getItem('pixelPerfectOpacity');
   const initialValue = parseInt(storedOpacity) || 100;
   
-  sliderContainer.appendChild(sliderTrack);
-  sliderContainer.appendChild(sliderFill);
-  sliderContainer.appendChild(sliderThumb);
+  const sliderContainer = div({ id: 'opacity-slider' },
+    div({ id: 'slider-track' }),
+    div({ id: 'slider-fill' }),
+    div({ id: 'slider-thumb' })
+  );
+  
+  // Get references to slider elements
+  const sliderThumb = sliderContainer.querySelector('#slider-thumb');
+  const sliderFill = sliderContainer.querySelector('#slider-fill');
 
-  const value = document.createElement('span');
-  value.id = 'opacity-value';
   // Set percentage text to match stored opacity
   const textStoredOpacity = localStorage.getItem('pixelPerfectOpacity');
   const opacityValue = textStoredOpacity || '100';
-  value.textContent = opacityValue + '%';
-  value.title = 'Current opacity value';
+  const value = span({ id: 'opacity-value', title: 'Current opacity value' }, opacityValue + '%');
 
   // Add invert toggle button
-  const invertBtn = document.createElement('button');
-  invertBtn.textContent = 'Invert';
-  invertBtn.id = 'invert-btn';
+  const invertBtn = div({ class: 'invert btn' }, 'Invert');
   
   // Restore invert state from localStorage
   const buttonStoredInverted = localStorage.getItem('pixelPerfectInverted');
@@ -592,66 +612,49 @@ function createOverlay() {
   }
 
   // Add scroll mode custom dropdown
-  const scrollModeSelect = document.createElement('div');
-  scrollModeSelect.id = 'scroll-mode-select';
-  scrollModeSelect.title = 'Select scroll mode';
-  
-  // Create text span for the button
-  const buttonText = document.createElement('span');
-  buttonText.textContent = 'Scroll Both';
-  scrollModeSelect.appendChild(buttonText);
-  
-  // Create custom dropdown
-  const scrollModeDropdown = document.createElement('div');
-  scrollModeDropdown.id = 'scroll-mode-dropdown';
-  
-  // Create dropdown options
   const options = [
     { value: 'both', text: 'Scroll Both', selected: true },
     { value: 'original', text: 'Scroll Page', selected: false },
     { value: 'overlay', text: 'Scroll Overlay', selected: false }
   ];
   
-  options.forEach(option => {
-    const optionElement = document.createElement('div');
-    optionElement.className = `dropdown-option ${option.selected ? 'selected' : ''}`;
-    optionElement.dataset.value = option.value;
-    
-    const checkmark = document.createElement('span');
-    checkmark.className = 'checkmark';
-    checkmark.textContent = option.selected ? '✓' : '';
-    
-    const text = document.createElement('span');
-    text.textContent = option.text;
-    
-    optionElement.appendChild(checkmark);
-    optionElement.appendChild(text);
-    scrollModeDropdown.appendChild(optionElement);
-  });
+  const scrollModeDropdown = div({ id: 'scroll-mode-dropdown' },
+    ...options.map(option => 
+      div({ 
+        class: `dropdown-option ${option.selected ? 'selected' : ''}`, 
+        'data-value': option.value 
+      },
+        span({ class: 'checkmark' }, option.selected ? '✓' : ''),
+        span({}, option.text)
+      )
+    )
+  );
   
-  // Add dropdown to select button
-  scrollModeSelect.appendChild(scrollModeDropdown);
+  const scrollModeSelect = div({ 
+    class: 'scroll-mode-select btn', 
+    title: 'Select scroll mode' 
+  },
+    span({}, 'Scroll Both'),
+    scrollModeDropdown
+  );
 
   // Add on/off toggle switch
-  const onOffToggle = document.createElement('label');
-  onOffToggle.id = 'on-off-toggle';
-  onOffToggle.title = 'Toggle overlay on/off';
-  onOffToggle.style.marginRight = '8px';
-  
-  const toggleInput = document.createElement('input');
-  toggleInput.type = 'checkbox';
-  
   // Restore toggle state from localStorage or default to ON
   const savedToggleState = localStorage.getItem('pixelPerfectOn');
-  toggleInput.checked = savedToggleState !== 'false'; // Default to true (ON) unless explicitly set to false
+  const isChecked = savedToggleState !== 'false'; // Default to true (ON) unless explicitly set to false
   
-  const toggleSlider = document.createElement('span');
-  toggleSlider.className = 'slider round';
-  
-  onOffToggle.appendChild(toggleInput);
-  onOffToggle.appendChild(toggleSlider);
+  const onOffToggle = label({ 
+    class: 'on-off switch', 
+    title: 'Toggle overlay on/off',
+    style: 'margin-right: 8px;'
+  },
+    input({ type: 'checkbox', checked: isChecked }),
+    span({ class: 'slider round' })
+  );
   
   // Add on/off class based on toggle state
+  const toggleInput = onOffToggle.querySelector('input');
+  
   const updateControlsClass = () => {
     if (ppControls) {
       ppControls.classList.remove('on', 'off');
@@ -666,29 +669,24 @@ function createOverlay() {
   toggleInput.addEventListener('change', updateControlsClass);
 
   // Add settings button (burger icon)
-  const settingsBtn = document.createElement('button');
-  settingsBtn.innerHTML = '≡';
-  settingsBtn.id = 'settings-btn';
-  settingsBtn.title = 'Settings';
+  const settingsBtn = div({ class: 'settings-burger', title: 'Settings' }, '≡');
   
   // Add close button
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '×';
-  closeBtn.id = 'close-btn';
-  closeBtn.title = 'Close overlay';
+  const closeBtn = div({ id: 'close-btn', title: 'Close overlay'}, '×');
   
   // Add open overlay button
-  const openOverlay = document.createElement('button');
-  openOverlay.innerHTML = `
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
-  openOverlay.id = 'open-overlay';
-  openOverlay.title = 'Open overlay in new tab for inspection';
-  openOverlay.addEventListener('click', () => {
-    if (ppIframe && ppIframe.src) {
-      window.open(ppIframe.src, '_blank');
+  const openOverlay = button({ 
+    id: 'open-overlay',
+    title: 'Open overlay in new tab for inspection',
+    innerHTML: `
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `,
+    onclick: () => {
+      if (ppIframe && ppIframe.src) {
+        window.open(ppIframe.src, '_blank');
+      }
     }
   });
 
@@ -949,35 +947,32 @@ function createOverlay() {
   });
 
   // Create settings menu
-  const settingsMenu = document.createElement('div');
-  settingsMenu.id = 'settings-menu';
-  settingsMenu.style.display = 'none';
+  const settingsMenu = div({ 
+    id: 'settings-menu',
+    style: 'display: none;'
+  });
   
   // Add dock setting
-  const dockOption = document.createElement('div');
-  dockOption.className = 'settings-option';
-  dockOption.innerHTML = `
-    <span class="settings-text">Dock</span>
-    <div class="dock-buttons">
-      <button class="dock-btn" data-position="top">⊤</button>
-      <button class="dock-btn" data-position="bottom">⊥</button>
-    </div>
-  `;
+  const dockOption = div({ class: 'settings-option' },
+    span({ class: 'settings-text' }, 'Dock'),
+    div({ class: 'dock-buttons' },
+      button({ class: 'dock-btn', 'data-position': 'top' }, '⊤'),
+      button({ class: 'dock-btn', 'data-position': 'bottom' }, '⊥')
+    )
+  );
   
   settingsMenu.appendChild(dockOption);
   
 
   
   // dark theme setting
-  const darkThemeOption = document.createElement('div');
-  darkThemeOption.className = 'settings-option';
-  darkThemeOption.innerHTML = `
-    <span class="settings-text">Dark theme</span>
-    <label class="switch">
-      <input type="checkbox" id="dark-theme-toggle" checked>
-      <span class="slider round"></span>
-    </label>
-  `;
+  const darkThemeOption = div({ class: 'settings-option' },
+    span({ class: 'settings-text' }, 'Dark theme'),
+    label({ class: 'switch' },
+      input({ type: 'checkbox', id: 'dark-theme-toggle', checked: true }),
+      span({ class: 'slider round' })
+    )
+  );
   
   settingsMenu.appendChild(darkThemeOption);
   
@@ -993,15 +988,13 @@ function createOverlay() {
   }
   
   // Sync URL path setting
-  const syncUrlPathOption = document.createElement('div');
-  syncUrlPathOption.className = 'settings-option';
-  syncUrlPathOption.innerHTML = `
-    <span class="settings-text">Sync URL path</span>
-    <label class="switch">
-      <input type="checkbox" id="sync-url-path-toggle">
-      <span class="slider round"></span>
-    </label>
-  `;
+  const syncUrlPathOption = div({ class: 'settings-option' },
+    span({ class: 'settings-text' }, 'Sync URL path'),
+    label({ class: 'switch' },
+      input({ type: 'checkbox', id: 'sync-url-path-toggle' }),
+      span({ class: 'slider round' })
+    )
+  );
   
   settingsMenu.appendChild(syncUrlPathOption);
   
@@ -1144,6 +1137,12 @@ function createOverlay() {
   // Check toggle state and set overlay visibility accordingly
   const overlayToggleState = localStorage.getItem('pixelPerfectOn');
   const shouldShowOverlay = overlayToggleState !== 'false'; // Default to true unless explicitly false
+  
+  // Ensure toggle input state matches the stored state
+  if (toggleInput) {
+    toggleInput.checked = shouldShowOverlay;
+    updateControlsClass(); // Update the visual state
+  }
   
   if (!shouldShowOverlay) {
     // Hide overlay but keep controls visible
