@@ -27,7 +27,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["pixel-perfect.png", "pixel-perfect-gray.png", "new-window.svg"],
+      "resources": ["pixel-perfect.png", "pixel-perfect-gray.png", "new-window.svg", "error.svg"],
       "matches": ["<all_urls>"]
     }
   ]

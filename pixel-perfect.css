@@ -1,25 +1,6 @@
 /* background button color */
 
-#overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 999999;
-  /* pointer-events: none; disables pointer events on overlay so page can be inspected */
-}
-
-#overlay-iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  border: none;
-}
-
-#controls {
+#pxp-controls {
   --border-radius: 12px;
   --blue: #0075ff;
   --height: 50px;
@@ -168,17 +149,32 @@
       z-index: 999;
       color: var(--text-color);
       cursor: pointer;
+      display: block; /* Ensure it's visible */
       
-      
-
-      svg {
-        fill: var(--text-color);
+      img {
         opacity: 0.5;
         transition: all 100ms ease-in-out;
+        width: 16px;
+        height: 16px;
+        display: block;
       }
 
-      &:hover svg {
-        fill: var(--blue);
+      /* Only apply filter to new-window icon, not error icon */
+      img[src*="new-window.svg"] {
+        filter: brightness(0) saturate(100%) invert(1); /* Make it white */
+      }
+
+      &:hover img[src*="new-window.svg"] {
+        opacity: 1;
+        filter: brightness(0) saturate(100%) invert(1) hue-rotate(200deg); /* Make it blue on hover */
+      }
+
+      /* Error icon should be red, not filtered */
+      img[src*="error.svg"] {
+        opacity: 0.8;
+      }
+
+      &:hover img[src*="error.svg"] {
         opacity: 1;
       }
     }
@@ -274,10 +270,57 @@
     }
   }
 
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    min-width: 40px;
+    height: 20px;
 
-  .scroll-mode-select {
+    input {
+      opacity: 0;
+      width: 0;
+      height: 0;
 
+      &:checked + .slider {
+        background-color: var(--blue);
+      }
+      
+      &:focus + .slider {
+        box-shadow: 0 0 1px var(--blue);
+      }
+      
+      &:checked + .slider:before {
+        transform: translateX(20px);
+      }
+    }
+    
+    .slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--light-background);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: .4s;
+
+      &:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: .2s;
+      }
+    }
   }
+
+
   
   #scroll-mode-dropdown {
     position: absolute;
@@ -426,7 +469,8 @@
       }
       
       .dock-btn {
-        width: 24px;
+        text-align: center;
+        width: 22px;
         height: 20px;
         background: var(--dark-background);
         border: 1px solid var(--border-color);
@@ -474,106 +518,59 @@
       border-radius: 0;
     }
   }
+}
 
 
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    min-width: 40px;
-    height: 20px;
+#pxp-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999999;
+  pointer-events: none; /* disables pointer events on overlay so page can be inspected */
 
-    input {
-      opacity: 0;
-      width: 0;
-      height: 0;
+  iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100%;
+    border: none;
+    pointer-events: none;
+    transition: transform 0.1s ease-out;
+    touch-action: none;
+    will-change: transform;
+  }
+}
 
-      &:checked + .slider {
-        background-color: var(--blue);
-      }
-      
-      &:focus + .slider {
-        box-shadow: 0 0 1px var(--blue);
-      }
-      
-      &:checked + .slider:before {
-        transform: translateX(20px);
-      }
-    }
-    
-    .slider {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: var(--light-background);
-      border-radius: 20px;
-      cursor: pointer;
-      transition: .4s;
+#pxp-error-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 40px 60px;
+  border-radius: 8px;
+  z-index: 1000001;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 
-      &:before {
-        position: absolute;
-        content: "";
-        height: 14px;
-        width: 14px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        border-radius: 50%;
-        transition: .2s;
-      }
-    }
+  .message {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
   }
   
-  /* Dark theme toggle switch styling - only for settings menu */
-  #settings-menu .switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    min-width: 40px;
-    height: 20px;
+  .details {
+    font-size: 16px;
+    word-break: break-all;
 
-    input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-
-      &:checked + .slider {
-        background-color: var(--blue);
-      }
-      
-      &:focus + .slider {
-        box-shadow: 0 0 1px var(--blue);
-      }
-      
-      &:checked + .slider:before {
-        transform: translateX(20px);
-      }
-    }
-    
-    .slider {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: var(--light-background);
-      border-radius: 20px;
-      cursor: pointer;
-      transition: .4s;
-
-      &:before {
-        position: absolute;
-        content: "";
-        height: 14px;
-        width: 14px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
-        border-radius: 50%;
-        transition: .2s;
-      }
+    a {
+      color: #fff;
     }
   }
 }
