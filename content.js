@@ -131,113 +131,7 @@ function updateFavicon(isActive) {
   }
 }
 
-  // todo: revisit what purpose this server - Function to detect webpage content boundaries
-function detectContentBoundaries() {
-  // Look for common content containers
-  const selectors = [
-    'main',
-    'article',
-    '.main',
-    '.content',
-    '.container',
-    '.wrapper',
-    '#main',
-    '#content',
-    '#container',
-    '#wrapper',
-    'body > div:first-child',
-    'body > div:first-child > div'
-  ];
-  
-  let contentElement = null;
-  
-  // Find the first matching content element
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element && element.offsetWidth > 0 && element.offsetHeight > 0) {
-      contentElement = element;
-      break;
-    }
-  }
-  
-  // If no content element found, try to find the largest content area
-  if (!contentElement) {
-    const allDivs = document.querySelectorAll('div');
-    let largestArea = 0;
-    
-    for (const div of allDivs) {
-      const rect = div.getBoundingClientRect();
-      const area = rect.width * rect.height;
-      if (area > largestArea && rect.width > 200 && rect.height > 200) {
-        largestArea = area;
-        contentElement = div;
-      }
-    }
-  }
-  
-  // If still no content element found, use body
-  if (!contentElement) {
-    contentElement = document.body;
-  }
-  
-  const rect = contentElement.getBoundingClientRect();
-  const bodyRect = document.body.getBoundingClientRect();
-  
-  return {
-    left: rect.left,
-    right: rect.right,
-    width: rect.width,
-    bodyLeft: bodyRect.left,
-    bodyWidth: bodyRect.width
-  };
-}
-
-// // Function to check if page has a transparent background
-// function hasTransparentBackground() {
-//   // Check body background
-//   const bodyStyle = window.getComputedStyle(document.body);
-//   const bodyBg = bodyStyle.backgroundColor;
-  
-//   // Check html background
-//   const htmlStyle = window.getComputedStyle(document.documentElement);
-//   const htmlBg = htmlStyle.backgroundColor;
-  
-//   // Check if backgrounds are transparent or rgba(0,0,0,0)
-//   const isTransparent = (color) => {
-//     return color === 'transparent' || 
-//            color === 'rgba(0, 0, 0, 0)' || 
-//            color === 'rgba(0,0,0,0)' ||
-//            color === 'initial' ||
-//            color === 'inherit';
-//   };
-  
-//   const bodyTransparent = isTransparent(bodyBg);
-//   const htmlTransparent = isTransparent(htmlBg);
-  
-//   return bodyTransparent && htmlTransparent;
-// }
-
-// Function to adjust overlay positioning to match content
-function adjustOverlayPosition() {
-  if (!ppOverlay) return;
-  
-  const boundaries = detectContentBoundaries();
-  const viewportWidth = window.innerWidth;
-  
-  // Calculate the offset needed to align with content
-  const contentLeft = boundaries.left;
-  const contentWidth = boundaries.width;
-  
-  // If content is centered or has margins, adjust overlay accordingly
-  if (contentLeft > 0 || contentWidth < viewportWidth) {
-    ppOverlay.style.left = contentLeft + 'px';
-    ppOverlay.style.width = contentWidth + 'px';
-  } else {
-    // Reset to full viewport if content spans full width
-    ppOverlay.style.left = '0px';
-    ppOverlay.style.width = '100vw';
-  }
-}
+ 
 
 // Define event handlers first to avoid reference errors
 // Throttle function for performance
@@ -434,7 +328,7 @@ function toggleOverlay() {
     // Remove event listeners
     document.removeEventListener('wheel', globalWheelHandler);
     document.removeEventListener('keydown', arrowKeyHandler);
-    window.removeEventListener('resize', adjustOverlayPosition);
+    // TODO: revisit scroll positon when refreshing  window.removeEventListener('resize', adjustOverlayPosition); 
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
     
     // Store inactive state
@@ -500,7 +394,15 @@ function createOverlay() {
   const overlayURL = iframeUrl + '?cb=' + Date.now();
   ppIframe = domEl('iframe', { src: overlayURL, style: 'height: ' + document.body.scrollHeight + 'px' });
   
+  // Add iframe load event to sync scroll position
+  ppIframe.addEventListener('load', () => {
+    // Sync iframe scroll position with main page scroll position
+    const mainScrollY = window.scrollY;
+    ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+  });
+  
   // check for errors
+  // TODO: check for SSL - https://localhost:3000/
   (async () => {
     try {
       const response = await fetch(overlayURL.split('?')[0], { method: 'HEAD' });
@@ -1221,11 +1123,11 @@ function createOverlay() {
   document.body.appendChild(ppControls);
   
   // Adjust overlay position to match content boundaries with a small delay
-  setTimeout(() => {
-    adjustOverlayPosition();
-  }, 100);
+  // setTimeout(() => {
+  //   adjustOverlayPosition();
+  // }, 100);
   
-  // Add resize listener to adjust overlay position when window is resized
-  window.addEventListener('resize', adjustOverlayPosition);
+  // // Add resize listener to adjust overlay position when window is resized
+  // window.addEventListener('resize', adjustOverlayPosition);
   
 } 

@@ -1,3 +1,5 @@
+// remove screenshot stuff
+
 // Initialize icon state when extension loads
 chrome.runtime.onStartup.addListener(async () => {
   
@@ -97,11 +99,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
-  if (request.action === "captureScreenshot") {
-    captureScreenshot(request.url, sender.tab.id);
-    // Return true to indicate we'll send a response asynchronously
-    return true;
-  } else if (request.action === "updateIcon") {
+  if (request.action === "updateIcon") {
     updateToolbarIcon(request.active);
     // Send response back to content script
     sendResponse({ success: true });
@@ -139,53 +137,4 @@ async function updateToolbarIcon(active) {
   }
 }
 
-async function captureScreenshot(url, originalTabId) {
-  
-  try {
-    // Create a new tab with the target URL
-    const newTab = await chrome.tabs.create({
-      url: url,
-      active: false // Open in background
-    });
-    
-    // Wait for the page to load
-    await new Promise(resolve => {
-      chrome.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-        if (tabId === newTab.id && changeInfo.status === 'complete') {
-          chrome.tabs.onUpdated.removeListener(listener);
-          resolve();
-        }
-      });
-    });
-    
-    // Wait a bit more for any dynamic content to load
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Capture the screenshot
-    const screenshotUrl = await chrome.tabs.captureVisibleTab(newTab.windowId, {
-      format: 'png',
-      quality: 100
-    });
-    
-    // Close the temporary tab
-    await chrome.tabs.remove(newTab.id);
-    
-    // Send the screenshot back to the content script
-    await chrome.tabs.sendMessage(originalTabId, {
-      action: "screenshotCaptured",
-      imageUrl: screenshotUrl
-    });
-    
-  } catch (error) {
-    console.error('Error capturing screenshot:', error);
-    // Send error back to content script
-    try {
-      await chrome.tabs.sendMessage(originalTabId, {
-        action: "screenshotError",
-        error: error.message
-      });
-    } catch (sendError) {
-      console.error('Error sending error message:', sendError);
-    }
-  }
-} 
+ 
