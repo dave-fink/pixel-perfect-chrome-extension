@@ -19,7 +19,6 @@ function domEl(tag, ...items) {
   return element;
 }
 
-// Element helper functions
 function div(...items) { return domEl('div', ...items); }
 function span(...items) { return domEl('span', ...items); }
 function label(...items) { return domEl('label', ...items); }
@@ -27,84 +26,138 @@ function input(...items) { return domEl('input', ...items); }
 function img(...items) { return domEl('img', ...items); }
 function link(...items) { return domEl('link', ...items); }
 function a(...items) { return domEl('a', ...items); }
-  
-// Helper function to show error message
+
+
+// show error message
 function showErrorMessage(url) {
   const errorOverlay = div({ id: 'pxp-error-message' }, 
-    div({ class: 'message' }, 'Error loading overlay'),
-    div({ class: 'details' }, a({ href: url, target: '_blank' }, url))
+    div({ class: 'pxp-message' }, 'Error loading overlay'),
+    div({ class: 'pxp-details' }, a({ href: url, target: '_blank' }, url))
   );
   document.body.appendChild(errorOverlay);
 }
   
-  // Check if content script is already running
+// Check if content script is already running
 if (window.pixelPerfectScriptLoaded) {
-  // Exit early to prevent duplicate scripts
   throw new Error('Content script already loaded');
 }
 
 window.pixelPerfectScriptLoaded = true;
 
-let ppOverlay = null;
-let ppControls = null;
-let ppIframe = null;
-let ppIsInverted = false;
-let ppLastOpacityValue = 100;
-let ppScrollMode = 'both';
-let ppIsActive = false;
+let pxpOverlay = null;
+let pxpControls = null;
+let pxpIframe = null;
+let pxpIsInverted = false;
+let pxpLastOpacityValue = 100;
+let pxpScrollMode = 'both';
+let pxpIsActive = false;
 let originalFavicon = null;
 
 function updateFavicon(isActive) {
-  console.log('updateFavicon called with isActive:', isActive);
-  
-  // Store original favicon on first call
+      // Store original favicon on first call
   if (!originalFavicon) {
-    const existingFavicon = document.querySelector('link[rel="icon"]') || 
-                            document.querySelector('link[rel="shortcut icon"]');
+    const existingFavicon = document.querySelector('link[rel="icon"]') ||
+                            document.querySelector('link[rel="shortcut icon"]') ||
+                            document.querySelector('link[rel="apple-touch-icon"]');
     originalFavicon = existingFavicon ? existingFavicon.href : null;
-    console.log('Original favicon stored:', originalFavicon);
   }
   
-  if (isActive) {
-    console.log('Creating favicon overlay...');
-    
-    // Create canvas for favicon overlay
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 32;
-    canvas.height = 32;
-    
-          // Load original favicon
+      if (isActive) {
+      // Create canvas for favicon overlay
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = 32;
+      canvas.height = 32;
+      
+      // Load original favicon or create a default one
       const originalFaviconImg = new Image();
       originalFaviconImg.crossOrigin = 'anonymous';
+      
       originalFaviconImg.onload = () => {
         // Draw original favicon in grayscale
         ctx.filter = 'grayscale(100%)';
         ctx.drawImage(originalFaviconImg, 0, 0, 32, 32);
-        ctx.filter = 'none'; // Reset filter for the extension icon
-      
-      // Load extension icon
-      const extensionIcon = new Image();
-      extensionIcon.crossOrigin = 'anonymous';
-      extensionIcon.onload = () => {
-        // Draw extension icon in bottom-right corner (20x20)
-        ctx.drawImage(extensionIcon, 10, 10, 22, 22);
+        ctx.filter = 'none';
         
-        // Convert canvas to data URL and create favicon link
-        const overlayFavicon = canvas.toDataURL();
-        
-        // Remove all existing favicon links
-        const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
-        existingFavicons.forEach(favicon => { favicon.remove() });
-        
-        // Create new favicon link with overlay
-        const newFavicon = link({ rel: 'icon', href: overlayFavicon, id: 'pixel-perfect-favicon' });
-        
-        document.head.appendChild(newFavicon);
+        // Load extension icon
+        const extensionIcon = new Image();
+        extensionIcon.crossOrigin = 'anonymous';
+        extensionIcon.onload = () => {
+          ctx.drawImage(extensionIcon, 10, 10, 22, 22);
+          
+          // Create new favicon link with overlay
+          const overlayFavicon = canvas.toDataURL();
+          const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+          existingFavicons.forEach(favicon => favicon.remove());
+          
+          const newFavicon = link({ rel: 'icon', href: overlayFavicon, id: 'pixel-perfect-favicon' });
+          document.head.appendChild(newFavicon);
+        };
+        extensionIcon.src = chrome.runtime.getURL('icons/favicon-dot.png');
       };
-      extensionIcon.src = chrome.runtime.getURL('icons/favicon-dot.png');
-    };
-    originalFaviconImg.src = originalFavicon;
+      
+      originalFaviconImg.onerror = () => {
+        // Try current page favicon
+        const currentFavicon = document.querySelector('link[rel="icon"]') || 
+                               document.querySelector('link[rel="shortcut icon"]') ||
+                               document.querySelector('link[rel="apple-touch-icon"]');
+        
+        if (currentFavicon && currentFavicon.href !== originalFavicon) {
+          originalFaviconImg.src = currentFavicon.href;
+          return;
+        }
+        
+        // Try root favicon.ico
+        fetch(window.location.origin + '/favicon.ico', { method: 'HEAD' })
+          .then(response => {
+            if (response.ok) {
+              originalFaviconImg.src = window.location.origin + '/favicon.ico';
+            } else {
+              throw new Error('Root favicon not found');
+            }
+          })
+          .catch(() => createDefaultFavicon());
+      };
+      
+      function createDefaultFavicon() {
+        const domain = window.location.hostname;
+        const initial = domain.charAt(0).toUpperCase();
+        
+        ctx.fillStyle = '#e0e0e0';
+        ctx.fillRect(0, 0, 32, 32);
+        ctx.fillStyle = '#666';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(initial, 16, 22);
+        
+        const extensionIcon = new Image();
+        extensionIcon.crossOrigin = 'anonymous';
+        extensionIcon.onload = () => {
+          ctx.drawImage(extensionIcon, 10, 10, 22, 22);
+          
+          const overlayFavicon = canvas.toDataURL();
+          const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+          existingFavicons.forEach(favicon => favicon.remove());
+          
+          const newFavicon = link({ rel: 'icon', href: overlayFavicon, id: 'pixel-perfect-favicon' });
+          document.head.appendChild(newFavicon);
+        };
+        extensionIcon.src = chrome.runtime.getURL('icons/favicon-dot.png');
+      }
+      
+      if (originalFavicon) {
+        originalFaviconImg.src = originalFavicon;
+      } else {
+        const anyFavicon = document.querySelector('link[rel="icon"]') || 
+                           document.querySelector('link[rel="shortcut icon"]') ||
+                           document.querySelector('link[rel="apple-touch-icon"]');
+        
+        if (anyFavicon) {
+          originalFaviconImg.src = anyFavicon.href;
+        } else {
+          originalFaviconImg.onerror();
+        }
+      }
     
   } else {
     
@@ -142,18 +195,18 @@ let scrollSyncTimeout;
 let lastScrollY = 0; // Cache last scroll position to avoid unnecessary updates
 
 function syncIframeScroll() {
-  if (ppIframe && ppScrollMode === 'both') {
+  if (pxpIframe && ppScrollMode === 'both') {
     const mainScrollY = window.scrollY;
     // Only update if scroll position actually changed
     if (mainScrollY !== lastScrollY) {
-      ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+      pxpIframe.style.transform = `translateY(-${mainScrollY}px)`;
       lastScrollY = mainScrollY;
     }
   }
 }
 
 function globalWheelHandler(e) {
-  if (ppIframe && ppIframe.style.opacity !== '0') {
+  if (pxpIframe && pxpIframe.style.opacity !== '0') {
     const scrollAmount = e.deltaY;
 
     if (ppScrollMode === 'both') {
@@ -171,15 +224,15 @@ function globalWheelHandler(e) {
 
       // Use requestAnimationFrame for smooth iframe scrolling
       requestAnimationFrame(() => {
-        const storedMainScrollY = ppIframe.dataset.mainPageScrollY || '0';
+        const storedMainScrollY = pxpIframe.dataset.mainPageScrollY || '0';
         window.scrollTo(0, parseInt(storedMainScrollY));
 
-        const currentTransform = ppIframe.style.transform;
+        const currentTransform = pxpIframe.style.transform;
         const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
         const newY = currentY - scrollAmount;
 
         if (newY <= 0 && newY >= -10000) { // Simple boundary check
-          ppIframe.style.transform = `translateY(${newY}px)`;
+          pxpIframe.style.transform = `translateY(${newY}px)`;
         }
       });
       return false; // Prevent event from bubbling up
@@ -189,7 +242,7 @@ function globalWheelHandler(e) {
 
 // Add arrow key handler for fine-tuned scrolling
 function arrowKeyHandler(e) {
-  if (ppIframe && ppIframe.style.opacity !== '0') {
+  if (pxpIframe && pxpIframe.style.opacity !== '0') {
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault(); // Prevent default arrow key behavior
 
@@ -199,19 +252,19 @@ function arrowKeyHandler(e) {
         // Scroll both together
         const mainScrollY = window.scrollY - scrollAmount;
         window.scrollTo(0, Math.max(0, mainScrollY));
-        ppIframe.style.transform = `translateY(-${Math.max(0, mainScrollY)}px)`;
+        pxpIframe.style.transform = `translateY(-${Math.max(0, mainScrollY)}px)`;
       } else if (ppScrollMode === 'original') {
         // Only scroll main page
         const mainScrollY = window.scrollY - scrollAmount;
         window.scrollTo(0, Math.max(0, mainScrollY));
       } else if (ppScrollMode === 'overlay') {
         // Only scroll iframe
-        const currentTransform = ppIframe.style.transform;
+        const currentTransform = pxpIframe.style.transform;
         const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
         const newY = currentY - scrollAmount;
 
         if (newY <= 0 && newY >= -10000) {
-          ppIframe.style.transform = `translateY(${newY}px)`;
+          pxpIframe.style.transform = `translateY(${newY}px)`;
         }
       }
     }
@@ -226,7 +279,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === "autoCreateOverlay") {
     console.log('Received autoCreateOverlay message');
     // Auto-create overlay without toggling state
-    if (!ppOverlay) {
+    if (!pxpOverlay) {
       console.log('Creating overlay via autoCreateOverlay');
       createOverlay();
       ppIsActive = true;
@@ -259,7 +312,7 @@ function autoRestoreOverlay() {
   if (shouldBeActive) {
     // Longer delay to ensure page is fully loaded and extension is ready
     setTimeout(() => {
-      if (!ppOverlay) {
+      if (!pxpOverlay) {
         createOverlay();
         ppIsActive = true;
         // Store active state
@@ -295,8 +348,8 @@ function toggleOverlay() {
   const overlayInDOM = document.getElementById('pxp-overlay');
   const controlsInDOM = document.getElementById('pxp-controls');
   
-  if (ppOverlay || overlayInDOM || controlsInDOM) {
-    if (ppOverlay) ppOverlay.remove();
+  if (pxpOverlay || overlayInDOM || controlsInDOM) {
+    if (pxpOverlay) pxpOverlay.remove();
     if (overlayInDOM) overlayInDOM.remove();
     if (controlsInDOM) controlsInDOM.remove();
     
@@ -305,11 +358,11 @@ function toggleOverlay() {
     if (errorOverlay) errorOverlay.remove();
     
     // Reset iframe display in case it was hidden due to error
-    if (ppIframe) ppIframe.style.display = '';
+    if (pxpIframe) pxpIframe.style.display = '';
     
     ppControls = null;
-    ppIframe = null;
-    ppOverlay = null;
+    pxpIframe = null;
+    pxpOverlay = null;
     ppIsInverted = false;
     ppLastOpacityValue = 100;
     ppIsActive = false;
@@ -379,53 +432,95 @@ function createOverlay() {
     }
   }
   
-  ppOverlay = div({ id: 'pxp-overlay' });
+  pxpOverlay = div({ id: 'pxp-overlay' });
   const overlayURL = iframeUrl + '?cb=' + Date.now();
-  ppIframe = domEl('iframe', { src: overlayURL, style: 'height: ' + document.body.scrollHeight + 'px' });
+  
+  // Use a reliable height calculation that works with hard refresh
+  const getPageHeight = () => {
+    return Math.max(
+      document.body.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.clientHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight,
+      window.innerHeight
+    );
+  };
+  
+  // Ensure DOM is ready (especially for hard refreshes)
+  const initialHeight = getPageHeight();
+  pxpIframe = domEl('iframe', { src: overlayURL, style: 'height: ' + initialHeight + 'px' });
+  
+  // Add resize observer to handle dynamic content changes
+  const resizeObserver = new ResizeObserver(() => {
+    if (pxpIframe) pxpIframe.style.height = getPageHeight() + 'px';
+  });
+  resizeObserver.observe(document.body);
+  
+  // Double-check height after a short delay for hard refresh scenarios
+  setTimeout(() => {
+    if (pxpIframe) {
+      const newHeight = getPageHeight();
+      if (newHeight > initialHeight) pxpIframe.style.height = newHeight + 'px';
+    }
+  }, 100);
   
   // Add iframe load event to sync scroll position
-  ppIframe.addEventListener('load', () => {
+  pxpIframe.addEventListener('load', () => {
     // Sync iframe scroll position with main page scroll position
     const mainScrollY = window.scrollY;
-    ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+    pxpIframe.style.transform = `translateY(-${mainScrollY}px)`;
   });
   
-  // check for errors
-  // TODO: check for SSL - https://localhost:3000/
+  // check for errors including SSL issues
   (async () => {
     try {
       const response = await fetch(overlayURL.split('?')[0], { method: 'HEAD' });
       if (response.status !== 200) {
         document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
         
-        ppIframe.style.display = 'none';
+        pxpIframe.style.display = 'none';
         
         // Show error message if overlay is ON
         const pixelPerfectOn = localStorage.getItem('pixelPerfectOn') === 'true';
-        if (pixelPerfectOn) showErrorMessage(ppIframe.src.split('?')[0]);
+        if (pixelPerfectOn) showErrorMessage(pxpIframe.src.split('?')[0]);
       }
     } catch (error) {
-      // Leave icon as is if fetch fails
+      // Handle SSL and other connection errors
       console.error('Error fetching overlay URL:', error);
+      
+      // Check if it's specifically an SSL/HTTPS error
+      const isSSLError = error.message.includes('net::ERR_CERT_') ||
+                         error.message.includes('SSL certificate') ||
+                         error.message.includes('CERT_') ||
+                         (error.message.includes('Failed to fetch') && overlayURL.startsWith('https://'));
+      
+      if (isSSLError) {
+        document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
+        
+        pxpIframe.style.display = 'none';
+        
+        // Show error message if overlay is ON
+        const pixelPerfectOn = localStorage.getItem('pixelPerfectOn') === 'true';
+        if (pixelPerfectOn) showErrorMessage(pxpIframe.src.split('?')[0]);
+      }
     }
   })();
   
-  
-  
-  
+   
   // Apply invert filter if previously saved
   const storedInverted = localStorage.getItem('pixelPerfectInverted');
   if (storedInverted === 'true') {
     ppIsInverted = true;
-    ppIframe.style.filter = 'invert(1)';
-    ppIframe.style.backgroundColor = 'white'; // Add white background for inversion
+    pxpIframe.style.filter = 'invert(1)';
+    pxpIframe.style.backgroundColor = 'white'; // Add white background for inversion
   }
   
   // Apply stored opacity to iframe
   const iframeStoredOpacity = localStorage.getItem('pixelPerfectOpacity');
   if (iframeStoredOpacity) {
     const opacity = parseInt(iframeStoredOpacity) / 100;
-    ppIframe.style.opacity = opacity;
+    pxpIframe.style.opacity = opacity;
     ppLastOpacityValue = parseInt(iframeStoredOpacity);
   }
   
@@ -476,7 +571,6 @@ function createOverlay() {
     title: 'Overlay URL'
   });
 
-
   
   // Add open overlay button
   const openOverlayUrl = div({ 
@@ -492,9 +586,9 @@ function createOverlay() {
   );
   
   openOverlayUrl.addEventListener('click', () => {
-    if (ppIframe && ppIframe.src) {
+    if (pxpIframe && pxpIframe.src) {
       // remove the cache buster for the new tab
-      const baseUrl = ppIframe.src.split('?')[0];
+      const baseUrl = pxpIframe.src.split('?')[0];
       window.open(baseUrl, '_blank');
     }
   });
@@ -538,7 +632,7 @@ function createOverlay() {
   const scrollModeDropdown = div({ id: 'scroll-mode-dropdown' },
     ...options.map(option => 
       div({ 
-        class: `dropdown-option ${option.selected ? 'selected' : ''}`, 
+        class: `pxp-dropdown-option ${option.selected ? 'selected' : ''}`, 
         'data-value': option.value 
       },
         span({ class: 'checkmark' }, option.selected ? '✓' : ''),
@@ -597,8 +691,8 @@ function createOverlay() {
     id: 'open-overlay',
     title: 'Open overlay in new tab',
     onclick: () => {
-      if (ppIframe && ppIframe.src) {
-        window.open(ppIframe.src, '_blank');
+      if (pxpIframe && pxpIframe.src) {
+        window.open(pxpIframe.src, '_blank');
       }
     }
   }, img({ src: chrome.runtime.getURL('new-window.svg'), alt: 'Open in new tab', width: '16', height: '16' }));
@@ -713,7 +807,7 @@ function createOverlay() {
   
   function updateOpacity(percentage) {
     const opacity = percentage / 100;
-    ppIframe.style.opacity = opacity;
+    pxpIframe.style.opacity = opacity;
     value.textContent = Math.round(percentage) + '%';
     ppLastOpacityValue = Math.round(percentage);
     localStorage.setItem('pixelPerfectOpacity', Math.round(percentage).toString());
@@ -723,8 +817,8 @@ function createOverlay() {
   toggleInput.addEventListener('change', function() {
     if (toggleInput.checked) {
       // Show overlay and restore opacity
-      ppOverlay.style.zIndex = '999999';
-      ppOverlay.style.opacity = '1';
+      pxpOverlay.style.zIndex = '999999';
+      pxpOverlay.style.opacity = '1';
       
       // Re-enable all controls
       sliderContainer.classList.remove('disabled');
@@ -737,12 +831,12 @@ function createOverlay() {
       sliderThumb.style.left = ppLastOpacityValue + '%';
       sliderFill.style.width = ppLastOpacityValue + '%';
       const opacity = ppLastOpacityValue / 100;
-      ppIframe.style.opacity = opacity;
+      pxpIframe.style.opacity = opacity;
       value.textContent = ppLastOpacityValue + '%';
       
       // Check if there's an error and show error message
       const openOverlayImg = document.querySelector('#open-overlay-url img');
-      if (openOverlayImg && openOverlayImg.src.includes('error.svg')) showErrorMessage(ppIframe.src.split('?')[0]);
+      if (openOverlayImg && openOverlayImg.src.includes('error.svg')) showErrorMessage(pxpIframe.src.split('?')[0]);
       
       // Save toggle state to localStorage
       localStorage.setItem('pixelPerfectOn', 'true');
@@ -752,8 +846,8 @@ function createOverlay() {
       ppLastOpacityValue = Math.round(currentLeft);
       
       // Hide overlay but keep controls visible and accessible
-      ppOverlay.style.zIndex = '-999999';
-      ppOverlay.style.opacity = '0';
+      pxpOverlay.style.zIndex = '-999999';
+      pxpOverlay.style.opacity = '0';
       
       // Keep controls enabled but just disable the slider functionality
       sliderContainer.classList.add('disabled');
@@ -765,7 +859,7 @@ function createOverlay() {
       // Move slider to 0 and set 50% opacity for OFF state
       sliderThumb.style.left = '0%';
       sliderFill.style.width = '0%';
-      ppIframe.style.opacity = '0.5';
+      pxpIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
       
       // Hide error message if it exists
@@ -781,12 +875,12 @@ function createOverlay() {
     ppIsInverted = !ppIsInverted;
 
     if (ppIsInverted) {
-      ppIframe.style.filter = 'invert(1)';
-      ppIframe.style.backgroundColor = 'white'; // Add white background for inversion
+      pxpIframe.style.filter = 'invert(1)';
+      pxpIframe.style.backgroundColor = 'white'; // Add white background for inversion
       this.classList.add('active');
     } else {
-      ppIframe.style.filter = 'none';
-      ppIframe.style.backgroundColor = 'transparent'; // Remove any background
+      pxpIframe.style.filter = 'none';
+      pxpIframe.style.backgroundColor = 'transparent'; // Remove any background
       this.classList.remove('active');
     }
     
@@ -839,19 +933,19 @@ function createOverlay() {
       if (newMode === 'both') {
         // Both scroll together - sync iframe with current page scroll
         const mainScrollY = window.scrollY;
-        ppIframe.style.transform = `translateY(-${mainScrollY}px)`;
+        pxpIframe.style.transform = `translateY(-${mainScrollY}px)`;
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
       } else if (newMode === 'original') {
         // Only original page scrolls - keep iframe at current position
-        const currentTransform = ppIframe.style.transform;
+        const currentTransform = pxpIframe.style.transform;
         const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
-        ppIframe.style.transform = `translateY(${currentY}px)`;
+        pxpIframe.style.transform = `translateY(${currentY}px)`;
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
       } else if (newMode === 'overlay') {
         // Only iframe scrolls - fix main page scroll position
-        ppIframe.dataset.mainPageScrollY = window.scrollY.toString();
+        pxpIframe.dataset.mainPageScrollY = window.scrollY.toString();
         // Calculate scrollbar width and compensate to prevent layout jump
         const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
         document.body.style.overflow = 'hidden';
@@ -1082,7 +1176,7 @@ function createOverlay() {
   ppControls.appendChild(scrollModeSelect);
   ppControls.appendChild(settingsBtn);
   ppControls.appendChild(closeBtn);
-  ppOverlay.appendChild(ppIframe);
+  pxpOverlay.appendChild(pxpIframe);
   
   // Check toggle state and set overlay visibility accordingly
   const overlayToggleState = localStorage.getItem('pixelPerfectOn');
@@ -1096,8 +1190,8 @@ function createOverlay() {
   
   if (!shouldShowOverlay) {
     // Hide overlay but keep controls visible
-    ppOverlay.style.zIndex = '-999999';
-    ppOverlay.style.opacity = '0';
+    pxpOverlay.style.zIndex = '-999999';
+    pxpOverlay.style.opacity = '0';
     
     // Disable slider functionality but keep other controls enabled
     sliderContainer.classList.add('disabled');
@@ -1106,12 +1200,12 @@ function createOverlay() {
     // Set slider to 0 and show OFF state
     sliderThumb.style.left = '0%';
     sliderFill.style.width = '0%';
-    ppIframe.style.opacity = '0.5';
+    pxpIframe.style.opacity = '0.5';
     value.textContent = 'OFF';
   }
   
   // Add both overlay and controls as siblings to body
-  document.body.appendChild(ppOverlay);
+  document.body.appendChild(pxpOverlay);
   document.body.appendChild(ppControls);
   
   // Adjust overlay position to match content boundaries with a small delay
