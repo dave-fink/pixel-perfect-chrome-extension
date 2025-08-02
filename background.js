@@ -114,20 +114,20 @@ async function updateToolbarIcon(active) {
       // Set colored icon globally
       await chrome.action.setIcon({
         path: {
-          "16": "pixel-perfect.png",
-          "32": "pixel-perfect.png",
-          "48": "pixel-perfect.png",
-          "128": "pixel-perfect.png"
+          "16": "icons/pixel-perfect.png",
+          "32": "icons/pixel-perfect.png",
+          "48": "icons/pixel-perfect.png",
+          "128": "icons/pixel-perfect.png"
         }
       });
     } else {
       // Set gray icon globally
       await chrome.action.setIcon({
         path: {
-          "16": "pixel-perfect-gray.png",
-          "32": "pixel-perfect-gray.png",
-          "48": "pixel-perfect-gray.png",
-          "128": "pixel-perfect-gray.png"
+          "16": "icons/pixel-perfect-gray.png",
+          "32": "icons/pixel-perfect-gray.png",
+          "48": "icons/pixel-perfect-gray.png",
+          "128": "icons/pixel-perfect-gray.png"
         }
       });
     }

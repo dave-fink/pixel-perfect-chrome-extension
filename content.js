@@ -1,4 +1,6 @@
 // INSPECTING - add a button to inspect the iframe
+// vh measurement issue, when changing viewport sync scrollign is a problem
+// custom scrollbars when using chrome mobile view can cause problems
 
 // DOM Helper Functions
 function domEl(tag, ...items) {
@@ -72,61 +74,48 @@ function updateFavicon(isActive) {
     canvas.width = 32;
     canvas.height = 32;
     
-    // Load original favicon
-    const originalFaviconImg = new Image();
-    originalFaviconImg.crossOrigin = 'anonymous';
-    originalFaviconImg.onload = () => {
-      // Draw original favicon
-      ctx.drawImage(originalFaviconImg, 0, 0, 32, 32);
+          // Load original favicon
+      const originalFaviconImg = new Image();
+      originalFaviconImg.crossOrigin = 'anonymous';
+      originalFaviconImg.onload = () => {
+        // Draw original favicon in grayscale
+        ctx.filter = 'grayscale(100%)';
+        ctx.drawImage(originalFaviconImg, 0, 0, 32, 32);
+        ctx.filter = 'none'; // Reset filter for the extension icon
       
       // Load extension icon
       const extensionIcon = new Image();
       extensionIcon.crossOrigin = 'anonymous';
       extensionIcon.onload = () => {
         // Draw extension icon in bottom-right corner (20x20)
-        ctx.drawImage(extensionIcon, 12, 12, 20, 20);
+        ctx.drawImage(extensionIcon, 10, 10, 22, 22);
         
         // Convert canvas to data URL and create favicon link
         const overlayFavicon = canvas.toDataURL();
         
         // Remove all existing favicon links
         const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
-        existingFavicons.forEach(favicon => {
-          favicon.remove();
-        });
+        existingFavicons.forEach(favicon => { favicon.remove() });
         
         // Create new favicon link with overlay
-        const newFavicon = link({ 
-          rel: 'icon',
-          href: overlayFavicon,
-          id: 'pixel-perfect-favicon'
-        });
+        const newFavicon = link({ rel: 'icon', href: overlayFavicon, id: 'pixel-perfect-favicon' });
         
         document.head.appendChild(newFavicon);
-        console.log('Overlay favicon added to head');
       };
-      extensionIcon.src = chrome.runtime.getURL('pixel-perfect.png');
+      extensionIcon.src = chrome.runtime.getURL('icons/favicon-dot.png');
     };
     originalFaviconImg.src = originalFavicon;
     
   } else {
-    console.log('Restoring original favicon...');
     
     // Remove extension favicon
     const extensionFavicon = document.getElementById('pixel-perfect-favicon');
-    if (extensionFavicon) {
-      extensionFavicon.remove();
-      console.log('Extension favicon removed');
-    }
+    if (extensionFavicon) extensionFavicon.remove();
     
     // Restore original favicon by recreating the link
     if (originalFavicon) {
-      const originalFaviconLink = link({ 
-        rel: 'icon',
-        href: originalFavicon
-      });
+      const originalFaviconLink = link({ rel: 'icon', href: originalFavicon });
       document.head.appendChild(originalFaviconLink);
-      console.log('Original favicon restored:', originalFavicon);
     }
   }
 }
@@ -407,7 +396,7 @@ function createOverlay() {
     try {
       const response = await fetch(overlayURL.split('?')[0], { method: 'HEAD' });
       if (response.status !== 200) {
-        document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('error.svg');
+        document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
         
         ppIframe.style.display = 'none';
         
@@ -442,7 +431,9 @@ function createOverlay() {
   
   ppControls = div({ id: 'pxp-controls', class: 'bottom' }); // Default to bottom positioning
 
-  const ppIcon = div({ id: 'pixel-perfect-icon' });
+  const ppIcon = div({ id: 'pixel-perfect-icon' }, 
+    img({ src: chrome.runtime.getURL('icons/pixel-perfect.svg'), alt: 'Pixel Perfect' }),
+  );
 
   // Create URL input container
   const urlContainer = div({ id: 'url-container' });
@@ -492,8 +483,8 @@ function createOverlay() {
     id: 'open-overlay-url', 
     title: 'Open overlay in new tab'
   },
-    domEl('img', { 
-      src: chrome.runtime.getURL('new-window.svg'),
+    img({ 
+      src: chrome.runtime.getURL('icons/new-window.svg'),
       alt: 'Open in new tab',
       width: '16',
       height: '16'
@@ -595,7 +586,8 @@ function createOverlay() {
   toggleInput.addEventListener('change', updateControlsClass);
 
   // Add settings button (burger icon)
-  const settingsBtn = div({ class: 'settings-burger', title: 'Settings' }, '≡');
+  const settingsBtn = div({ class: 'settings-burger', title: 'Settings' });
+  settingsBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   
   // Add close button
   const closeBtn = div({ id: 'close-btn', title: 'Close overlay'}, '×');

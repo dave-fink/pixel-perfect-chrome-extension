@@ -81,17 +81,14 @@
   }
 
   #pixel-perfect-icon {
-    width: var(--height);
-    height: inherit;
+    height: 34px;
+    width: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: -6px;
-    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAACbUlEQVRYhe2XX0hTURzHP7tZuba2OWN7yj/FEiFGimGyipLQHvoDdxQkJYGjXnpqSBBCFApCUpD0ENhLQUVxH6R6WTAqGiU+mEnorLlyRVQEmvtTOVgPi+ua290mWyPw+/Q7v3N/v9/nnHvO4RxVLBbDbrfXAb3ADkBNYRUGngFnJEl6qRJFse6PY02BCycrBGwXgJ4iFAfQAD0C8WkvlnYKgLaIANoSpd5gqZVxY1vGLMZf7ykPv8IQ9uRMoAgQFdYSUFsyJgmoLaDfQ9v6Fo5UOpmciOIZMmQFIGT1VZa6FdjMZe9NTp74QO/5YQz6aMYYxRlI1mjHqUW+4E8jL/w2nJ5WANxfTVx7coXTLXu52D1LZ9cuZmbTl8kJwFpxVbYv9Tcn9HhwaD8xEDwOgNPTytFtzZjK3Dja39DXX5sfgEQt/sf30VUe4HuJEYC3n22YdG6aGsepGqzm3XRpyjx5XQP6+W+y7f24QbZrLHNpY/IKkKi50EJqsylSeIAfK6v+2rLVxrGs4vIG4C1vl20NEfY39clt35QubVxOi/De8IBsT5etA2B+hQa/pl5efADntkiyHYmsUjyUcgI4/KBjoWFM/c2FehedB4/JbZfbqphzydswWZs0Ibp33+HQVofsez5Uy43bFfkDuLvvekp/jXmEjeZHaFZPAvFpd7mtGYvnDJA4usGHDbLt/wL+MR3QgG9Kx+sJreLxu2SARGUzumxUsINoGWAZ4L8BUNyGhrAH0Re/6doaZwoCoBJFMURxXkYAQQF4XKTiAE8FoIv4i/VfKwycFSRJGiH+PnQB6e9O+S3sAmySJI3+BlQipXqPcB8NAAAAAElFTkSuQmCC');
-    background-size: 24px 24px;
-    background-repeat: no-repeat;
-    background-position: center;
+    margin: 0 4px 0 12px;
     border-radius: var(--border-radius) 0 0 var(--border-radius);
+    .off & { filter: grayscale(100%) }
   }
 
   #url-container {
@@ -138,7 +135,6 @@
       background: transparent;
       width: 16px;
       height: 16px;
-
       position: absolute;
       top: 50%;
       right: 6px;
@@ -146,7 +142,6 @@
       z-index: 999;
       color: var(--text-color);
       cursor: pointer;
-      display: block; /* Ensure it's visible */
       
       img {
         opacity: 0.5;
@@ -395,21 +390,20 @@
   
  
   .settings-burger {
-    width: 30px;
-    height: var(--height);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 0 8px 0;
-    background: transparent;
-    border: none;
-    font-size: 30px;
-    color: var(--text-color);
+    width: 24px;
+    height: 24px;
     cursor: pointer;
+    opacity: .7;
     transition: color 0.2s ease;
+    color: var(--text-color); /* This will color the SVG */
+    &:hover { opacity: 1 }
 
-    &:hover {
-      opacity: .8;
+    svg {
+      width: inherit;
+      height: inherit;
     }
   }
   

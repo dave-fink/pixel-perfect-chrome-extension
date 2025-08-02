@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 217.95 218.4">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0075ff;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #0075ff;
+        stroke-miterlimit: 10;
+        stroke-width: 10px;
+      }
+
+      .cls-3 {
+        fill: #fff;
+        font-family: TamilSangamMN-Light, 'Tamil Sangam MN';
+        font-size: 92.04px;
+        font-weight: 300;
+      }
+
+      .cls-4 {
+        letter-spacing: 0em;
+      }
+
+      .cls-5 {
+        letter-spacing: .01em;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M108.97,22c48.08,0,87.2,39.12,87.2,87.2s-39.12,87.2-87.2,87.2S21.77,157.28,21.77,109.2,60.89,22,108.97,22M108.97,12C55.29,12,11.77,55.52,11.77,109.2s43.52,97.2,97.2,97.2,97.2-43.52,97.2-97.2S162.66,12,108.97,12h0Z"/>
+  <text class="cls-3" transform="translate(62 130.14) scale(.97 1)"><tspan class="cls-4" x="0" y="0">p</tspan><tspan class="cls-5" x="50.37" y="0">x</tspan></text>
+  <g>
+    <line class="cls-2" x1="108.97" x2="108.97" y2="48.55"/>
+    <line class="cls-2" x1="108.97" y1="169.85" x2="108.97" y2="218.4"/>
+  </g>
+  <g>
+    <line class="cls-2" x1="217.95" y1="109.2" x2="169.5" y2="109.2"/>
+    <line class="cls-2" x1="48.45" y1="109.2" y2="109.2"/>
+  </g>
+</svg>

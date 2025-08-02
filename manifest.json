@@ -10,24 +10,24 @@
   ],
   "action": {
     "default_icon": {
-      "16": "pixel-perfect.png",
-      "32": "pixel-perfect.png",
-      "48": "pixel-perfect.png",
-      "128": "pixel-perfect.png"
+      "16": "icons/pixel-perfect.png",
+      "32": "icons/pixel-perfect.png",
+      "48": "icons/pixel-perfect.png",
+      "128": "icons/pixel-perfect.png"
     }
   },
   "icons": {
-    "16": "pixel-perfect.png",
-    "32": "pixel-perfect.png",
-    "48": "pixel-perfect.png",
-    "128": "pixel-perfect.png"
+    "16": "icons/pixel-perfect.png",
+    "32": "icons/pixel-perfect.png",
+    "48": "icons/pixel-perfect.png",
+    "128": "icons/pixel-perfect.png"
   },
   "background": {
     "service_worker": "background.js"
   },
   "web_accessible_resources": [
     {
-      "resources": ["pixel-perfect.png", "pixel-perfect-gray.png", "new-window.svg", "error.svg"],
+      "resources": ["icons/*"],
       "matches": ["<all_urls>"]
     }
   ]
