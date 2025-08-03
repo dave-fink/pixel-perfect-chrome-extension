@@ -195,7 +195,7 @@ let scrollSyncTimeout;
 let lastScrollY = 0; // Cache last scroll position to avoid unnecessary updates
 
 function syncIframeScroll() {
-  if (pxpIframe && ppScrollMode === 'both') {
+  if (pxpIframe && pxpScrollMode === 'both') {
     const mainScrollY = window.scrollY;
     // Only update if scroll position actually changed
     if (mainScrollY !== lastScrollY) {
@@ -209,14 +209,14 @@ function globalWheelHandler(e) {
   if (pxpIframe && pxpIframe.style.opacity !== '0') {
     const scrollAmount = e.deltaY;
 
-    if (ppScrollMode === 'both') {
+    if (pxpScrollMode === 'both') {
       // Use throttled sync for smooth performance
       clearTimeout(scrollSyncTimeout);
       scrollSyncTimeout = setTimeout(syncIframeScroll, 16); // ~60fps
-    } else if (ppScrollMode === 'original') {
+    } else if (pxpScrollMode === 'original') {
       // Only scroll main page, iframe stays at current position
       // Don't change iframe position - let it stay where it is
-    } else if (ppScrollMode === 'overlay') {
+    } else if (pxpScrollMode === 'overlay') {
       // Only scroll iframe, prevent main page scroll completely
       e.preventDefault();
       e.stopPropagation();
@@ -248,16 +248,16 @@ function arrowKeyHandler(e) {
 
       const scrollAmount = e.key === 'ArrowUp' ? -1 : 1; // 1px at a time
 
-      if (ppScrollMode === 'both') {
+      if (pxpScrollMode === 'both') {
         // Scroll both together
         const mainScrollY = window.scrollY - scrollAmount;
         window.scrollTo(0, Math.max(0, mainScrollY));
         pxpIframe.style.transform = `translateY(-${Math.max(0, mainScrollY)}px)`;
-      } else if (ppScrollMode === 'original') {
+      } else if (pxpScrollMode === 'original') {
         // Only scroll main page
         const mainScrollY = window.scrollY - scrollAmount;
         window.scrollTo(0, Math.max(0, mainScrollY));
-      } else if (ppScrollMode === 'overlay') {
+      } else if (pxpScrollMode === 'overlay') {
         // Only scroll iframe
         const currentTransform = pxpIframe.style.transform;
         const currentY = currentTransform ? parseFloat(currentTransform.match(/translateY\(([^)]+)\)/)?.[1] || 0) : 0;
@@ -277,12 +277,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === "toggleOverlay") {
     toggleOverlay();
   } else if (request.action === "autoCreateOverlay") {
-    console.log('Received autoCreateOverlay message');
+
     // Auto-create overlay without toggling state
     if (!pxpOverlay) {
-      console.log('Creating overlay via autoCreateOverlay');
       createOverlay();
-      ppIsActive = true;
+      pxpIsActive = true;
       // Store active state
       localStorage.setItem('pixelPerfectActive', 'true');
       // Update toolbar icon to colored
@@ -314,7 +313,7 @@ function autoRestoreOverlay() {
     setTimeout(() => {
       if (!pxpOverlay) {
         createOverlay();
-        ppIsActive = true;
+        pxpIsActive = true;
         // Store active state
         localStorage.setItem('pixelPerfectActive', 'true');
         // Update toolbar icon to colored
@@ -353,19 +352,16 @@ function toggleOverlay() {
     if (overlayInDOM) overlayInDOM.remove();
     if (controlsInDOM) controlsInDOM.remove();
     
-    // Remove error overlay if it exists
-    const errorOverlay = document.getElementById('pxp-error-message');
-    if (errorOverlay) errorOverlay.remove();
-    
+   
     // Reset iframe display in case it was hidden due to error
     if (pxpIframe) pxpIframe.style.display = '';
     
     ppControls = null;
     pxpIframe = null;
     pxpOverlay = null;
-    ppIsInverted = false;
+    pxpIsInverted = false;
     ppLastOpacityValue = 100;
-    ppIsActive = false;
+    pxpIsActive = false;
     
     // Remove event listeners
     document.removeEventListener('wheel', globalWheelHandler);
@@ -465,11 +461,18 @@ function createOverlay() {
     }
   }, 100);
   
-  // Add iframe load event to sync scroll position
+  // Add iframe load event to sync scroll position and check for errors
   pxpIframe.addEventListener('load', () => {
     // Sync iframe scroll position with main page scroll position
     const mainScrollY = window.scrollY;
     pxpIframe.style.transform = `translateY(-${mainScrollY}px)`;
+  });
+  
+  // Add iframe error event to catch loading failures
+  pxpIframe.addEventListener('error', () => {
+    document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
+    pxpIframe.style.display = 'none';
+    showErrorMessage(pxpIframe.src.split('?')[0]);
   });
   
   // check for errors including SSL issues
@@ -480,29 +483,25 @@ function createOverlay() {
         document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
         
         pxpIframe.style.display = 'none';
-        
-        // Show error message if overlay is ON
-        const pixelPerfectOn = localStorage.getItem('pixelPerfectOn') === 'true';
-        if (pixelPerfectOn) showErrorMessage(pxpIframe.src.split('?')[0]);
+
+        showErrorMessage(pxpIframe.src.split('?')[0]);
       }
     } catch (error) {
-      // Handle SSL and other connection errors
-      console.error('Error fetching overlay URL:', error);
-      
-      // Check if it's specifically an SSL/HTTPS error
-      const isSSLError = error.message.includes('net::ERR_CERT_') ||
-                         error.message.includes('SSL certificate') ||
-                         error.message.includes('CERT_') ||
-                         (error.message.includes('Failed to fetch') && overlayURL.startsWith('https://'));
-      
-      if (isSSLError) {
-        document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
+      // Handle fetch errors
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
         
-        pxpIframe.style.display = 'none';
+        // Check if it's an SSL/HTTPS error
+        const isSSLError = error.message.includes('net::ERR_CERT_') ||
+                           error.message.includes('SSL certificate') ||
+                           error.message.includes('CERT_') ||
+                           (error.message.includes('Failed to fetch') && overlayURL.startsWith('https://'));
         
-        // Show error message if overlay is ON
-        const pixelPerfectOn = localStorage.getItem('pixelPerfectOn') === 'true';
-        if (pixelPerfectOn) showErrorMessage(pxpIframe.src.split('?')[0]);
+        // Show error for SSL issues or any fetch failure that's not a CORS issue
+        if (isSSLError || !overlayURL.includes('localhost')) {
+          document.querySelector('#open-overlay-url img').src = chrome.runtime.getURL('icons/error.svg');
+          pxpIframe.style.display = 'none';
+          showErrorMessage(pxpIframe.src.split('?')[0]);
+        }
       }
     }
   })();
@@ -511,7 +510,7 @@ function createOverlay() {
   // Apply invert filter if previously saved
   const storedInverted = localStorage.getItem('pixelPerfectInverted');
   if (storedInverted === 'true') {
-    ppIsInverted = true;
+    pxpIsInverted = true;
     pxpIframe.style.filter = 'invert(1)';
     pxpIframe.style.backgroundColor = 'white'; // Add white background for inversion
   }
@@ -524,7 +523,7 @@ function createOverlay() {
     ppLastOpacityValue = parseInt(iframeStoredOpacity);
   }
   
-  ppControls = div({ id: 'pxp-controls', class: 'bottom' }); // Default to bottom positioning
+  ppControls = div({ id: 'pxp-controls', class: 'top' }); // Default to top positioning
 
   const ppIcon = div({ id: 'pixel-perfect-icon' }, 
     img({ src: chrome.runtime.getURL('icons/pixel-perfect.svg'), alt: 'Pixel Perfect' }),
@@ -618,7 +617,7 @@ function createOverlay() {
   // Restore invert state from localStorage
   const buttonStoredInverted = localStorage.getItem('pixelPerfectInverted');
   if (buttonStoredInverted === 'true') {
-    ppIsInverted = true;
+    pxpIsInverted = true;
     invertBtn.classList.add('active');
   }
 
@@ -872,9 +871,9 @@ function createOverlay() {
   });
 
   invertBtn.addEventListener('click', function() {
-    ppIsInverted = !ppIsInverted;
+    pxpIsInverted = !pxpIsInverted;
 
-    if (ppIsInverted) {
+    if (pxpIsInverted) {
       pxpIframe.style.filter = 'invert(1)';
       pxpIframe.style.backgroundColor = 'white'; // Add white background for inversion
       this.classList.add('active');
@@ -885,7 +884,7 @@ function createOverlay() {
     }
     
     // Save invert setting to localStorage
-    localStorage.setItem('pixelPerfectInverted', ppIsInverted.toString());
+    localStorage.setItem('pixelPerfectInverted', pxpIsInverted.toString());
   });
 
   // Add scroll mode custom dropdown functionality
@@ -912,7 +911,7 @@ function createOverlay() {
       e.stopPropagation(); // Prevent event from bubbling up to button click
       
       const newMode = dropdownOption.dataset.value;
-      ppScrollMode = newMode;
+              pxpScrollMode = newMode;
       
       // Update button text
       const buttonText = scrollModeSelect.querySelector('span');
@@ -1116,26 +1115,20 @@ function createOverlay() {
         const normalizedOverlayPath = overlayUrlPath.replace(/\/$/, '') || '/';
         
         if (normalizedPagePath !== normalizedOverlayPath) {
-          console.log('URL paths do not match, reloading page...');
-          console.log('Page path:', normalizedPagePath);
-          console.log('Overlay path:', normalizedOverlayPath);
-          
           // Reload the page to sync the paths
           window.location.reload();
-        } else {
-          console.log('URL paths match, no reload needed');
-        }
+        } 
       }
     }
   });
   
-  // Restore dock position from localStorage or default to bottom
+  // Restore dock position from localStorage or default to top
   const savedDockPosition = localStorage.getItem('pixelPerfectDockPosition');
   if (savedDockPosition) {
     dockControls(savedDockPosition);
   } else {
-    // Default to bottom if no saved position
-    dockControls('bottom');
+    // Default to top if no saved position
+    dockControls('top');
   }
   
   // Apply initial theme
