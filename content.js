@@ -467,7 +467,7 @@ function createOverlay() {
   const initialHeight = getPageHeight();
   pxpIframe = domEl('iframe', {
     src: overlayURL, 
-    style: 'height: ' + initialHeight + 'px',
+    style: 'height: ' + initialHeight + 'px; display: none;',
     sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
     'data-cache-buster': Date.now().toString()
   });
@@ -499,19 +499,18 @@ function createOverlay() {
     showErrorMessage(pxpIframe.src.split('?')[0]);
   });
 
-  // Robust ping check using background script
-  chrome.runtime.sendMessage({ action: "pingUrl", url: overlayURL.split('?')[0] }, (response) => {
+  // Error check using background script
+  chrome.runtime.sendMessage({ action: "errorCheckURL", url: overlayURL.split('?')[0] }, (response) => {
     if (chrome.runtime.lastError) {
-      // Don't show error for message issues, just log them
       return;
     }
     if (response && !response.accessible) {
+      // Server is down - hide iframe and show error message
       pxpIframe.style.display = 'none';
       showErrorMessage(overlayURL.split('?')[0], response.error);
     } else {
-      // If server is accessible, ensure iframe is visible
+      // Server is up - show iframe and clear any existing error message
       pxpIframe.style.display = '';
-      // Remove any existing error message
       const errorOverlay = document.getElementById('pxp-error-message');
       if (errorOverlay) errorOverlay.remove();
     }
@@ -845,7 +844,7 @@ function createOverlay() {
       // Check server status when turning ON - ensures error message appears if server is down
       if (pxpIframe && pxpIframe.src) {
         const baseUrl = pxpIframe.src.split('?')[0];
-        chrome.runtime.sendMessage({ action: "pingUrl", url: baseUrl }, (response) => {
+        chrome.runtime.sendMessage({ action: "errorCheckURL", url: baseUrl }, (response) => {
           if (chrome.runtime.lastError) {
             return;
           }
