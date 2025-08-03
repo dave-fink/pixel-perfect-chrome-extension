@@ -135,7 +135,8 @@
       z-index: 999;
       color: var(--text-color);
       cursor: pointer;
-      
+      color: var(--text-color);
+
       img {
         opacity: 0.5;
         transition: all 100ms ease-in-out;
@@ -145,19 +146,15 @@
       }
 
       img[src*="new-window.svg"] {
-        filter: brightness(0) saturate(100%) invert(1);
+        /* filter: brightness(0) saturate(100%) invert(1); */
       }
 
       &:hover img[src*="new-window.svg"] {
         opacity: 1;
-        filter: brightness(0) saturate(100%) invert(1) hue-rotate(200deg);
+        /* filter: brightness(0) saturate(100%) invert(1) hue-rotate(200deg); */
       }
 
       img[src*="error.svg"] {
-        opacity: 0.8;
-      }
-
-      &:hover img[src*="error.svg"] {
         opacity: 1;
       }
     }
@@ -524,6 +521,12 @@
     touch-action: none;
     will-change: transform;
   }
+
+  &.error {
+    background: rgba(255, 255, 255, 0.6);
+    filter: grayscale(100%);
+    backdrop-filter: blur(10px);
+  }
 }
 
 #pxp-error-message {
@@ -549,10 +552,12 @@
   
   .pxp-details {
     font-size: 16px;
+    line-height: 1.5;
     word-break: break-all;
 
     a {
       color: #fff;
+      text-decoration: none;
     }
   }
 }
