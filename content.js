@@ -2,32 +2,6 @@
 // vh measurement issue, when changing viewport sync scrollign is a problem
 // custom scrollbars when using chrome mobile view can cause problems
 
-// DOM Helper Functions
-function domEl(tag, ...items) {
-  const element = document.createElement(tag);
-  if (!items?.length) return element;
-  const [first, ...rest] = items;
-  if (first && typeof first === 'object' && !(first instanceof Element)) {
-    Object.entries(first).forEach(([key, value]) =>
-      key.startsWith('on')
-        ? element.addEventListener(key.slice(2).toLowerCase(), value)
-        : element.setAttribute(key, Array.isArray(value) ? value.join(' ') : value)
-    );
-    items = rest;
-  }
-  items.forEach(item => item != null && element.appendChild(item instanceof Element ? item : document.createTextNode(item)));
-  return element;
-}
-
-function div(...items) { return domEl('div', ...items); }
-function span(...items) { return domEl('span', ...items); }
-function label(...items) { return domEl('label', ...items); }
-function input(...items) { return domEl('input', ...items); }
-function img(...items) { return domEl('img', ...items); }
-function link(...items) { return domEl('link', ...items); }
-function a(...items) { return domEl('a', ...items); }
-
-
 
 // show error message
 function showErrorMessage(url, errorDetails = '') {
@@ -55,12 +29,19 @@ if (window.pixelPerfectScriptLoaded) {
 
 window.pixelPerfectScriptLoaded = true;
 
+// Constants
+const DEFAULT_URL = 'http://localhost:3000/';
+const CACHE_BUSTER_PARAM = 'cb';
+const IFRAME_SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals';
+const HEIGHT_CHECK_DELAY = 100;
+const SCROLL_SYNC_THROTTLE = 16;
+
 let pxpOverlay = null;
 let pxpControls = null;
 let pxpIframe = null;
 let pxpIsInverted = false;
 let pxpLastOpacityValue = 100;
-let pxpScrollMode = 'both';
+let pxpScrollMode = pxpSettings.getScrollMode();
 let pxpIsActive = false;
 let originalFavicon = null;
 
@@ -196,19 +177,7 @@ function updateTab(isActive) {
 }
 
 
-// Throttle function for performance
-function throttle(func, limit) {
-  let inThrottle;
-  return function () {
-    const args = arguments;
-    const context = this;
-    if (!inThrottle) {
-      func.apply(context, args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
-    }
-  }
-}
+
 
 // Debounced scroll sync for better performance
 let scrollSyncTimeout;
@@ -303,7 +272,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       createOverlay();
       pxpIsActive = true;
       // Store active state
-      localStorage.setItem('pixelPerfectActive', 'true');
+      pxpSettings.setActive(true);
       // Update toolbar icon to colored
       chrome.runtime.sendMessage({action: 'updateIcon', active: true}, (response) => {
         if (chrome.runtime.lastError) {
@@ -318,12 +287,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Check if we should auto-create overlay on page load
 function autoRestoreOverlay() {
-  const storedUrl = localStorage.getItem('pixelPerfectUrl');
-  const isActive = localStorage.getItem('pixelPerfectActive');
+  const storedUrl = pxpUrls.getStoredUrl();
+  const isActive = pxpSettings.getActive();
 
   // If no active state is stored, default to active (true)
   // This ensures the extension works when localStorage is cleared
-  const shouldBeActive = isActive === null ? true : isActive === 'true';
+  const shouldBeActive = isActive;
 
   if (shouldBeActive) {
     // Longer delay to ensure page is fully loaded and extension is ready
@@ -332,7 +301,7 @@ function autoRestoreOverlay() {
         createOverlay();
         pxpIsActive = true;
         // Store active state
-        localStorage.setItem('pixelPerfectActive', 'true');
+        pxpSettings.setActive(true);
         // Update toolbar icon to colored
         chrome.runtime.sendMessage({action: 'updateIcon', active: true}, (response) => {
           if (chrome.runtime.lastError) {
@@ -368,6 +337,9 @@ function toggleOverlay() {
     if (pxpOverlay) pxpOverlay.remove();
     if (overlayInDOM) overlayInDOM.remove();
     if (controlsInDOM) controlsInDOM.remove();
+    
+    // Remove error message if it exists
+    removeErrorMessage();
 
     // Reset iframe display in case it was hidden due to error
     if (pxpIframe) pxpIframe.style.display = '';
@@ -375,7 +347,7 @@ function toggleOverlay() {
     // Remove error class from overlay
     if (pxpOverlay) pxpOverlay.classList.remove('error');
 
-    ppControls = null;
+    pxpControls = null;
     pxpIframe = null;
     pxpOverlay = null;
     pxpIsInverted = false;
@@ -389,7 +361,7 @@ function toggleOverlay() {
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
 
     // Store inactive state
-    localStorage.setItem('pixelPerfectActive', 'false');
+    pxpSettings.setActive(false);
     // Update toolbar icon to gray
     chrome.runtime.sendMessage({action: 'updateIcon', active: false}, (response) => {
       if (chrome.runtime.lastError) {
@@ -403,7 +375,7 @@ function toggleOverlay() {
     createOverlay();
     ppIsActive = true;
     // Store active state
-    localStorage.setItem('pixelPerfectActive', 'true');
+    pxpSettings.setActive(true);
     // Update toolbar icon to colored
     chrome.runtime.sendMessage({action: 'updateIcon', active: true}, (response) => {
       if (chrome.runtime.lastError) {
@@ -417,58 +389,19 @@ function toggleOverlay() {
 }
 
 function createOverlay() {
-  // Check for stored URL or use default
-  const iframeStoredUrl = localStorage.getItem('pixelPerfectUrl');
-  let iframeUrl = iframeStoredUrl || 'http://localhost:3000/'; // default URL
-
-  // Check if Sync URL Path is enabled for iframe
-  const iframeSyncUrlPathEnabled = localStorage.getItem('pixelPerfectSyncUrlPath') === 'true';
-  if (iframeSyncUrlPathEnabled) {
-    // Get current page URL path
-    const currentUrl = window.location.href;
-    const currentPath = new URL(currentUrl).pathname;
-
-    // Parse the iframe URL to get domain and port
-    try {
-      const iframeUrlObj = new URL(iframeUrl);
-      // Update the path while keeping domain and port
-      iframeUrlObj.pathname = currentPath;
-      iframeUrl = iframeUrlObj.href;
-    } catch (e) {
-      // If iframeUrl is not a valid URL, try to construct it
-      if (iframeUrl.includes('localhost')) {
-        const portMatch = iframeUrl.match(/localhost:(\d+)/);
-        const port = portMatch ? portMatch[1] : '3000';
-        iframeUrl = `http://localhost:${port}${currentPath}`;
-      } else {
-        // Fallback to localhost:3000 with current path
-        iframeUrl = `http://localhost:3000${currentPath}`;
-      }
-    }
-  }
+  // Get URL with path syncing applied
+  const iframeUrl = pxpUrls.getUrlWithPathSync();
 
   pxpOverlay = div({id: 'pxp-overlay'});
-  // Add cache busters to ensure fresh content
-  const overlayURL = iframeUrl + '?cb=' + Date.now();
-
-  // Use a reliable height calculation that works with hard refresh
-  const getPageHeight = () => {
-    return Math.max(
-      document.body.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.clientHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight,
-      window.innerHeight
-    );
-  };
+  // Get URL with cache buster
+  const overlayURL = pxpUrls.getIframeUrl();
 
   // Ensure DOM is ready (especially for hard refreshes)
   const initialHeight = getPageHeight();
   pxpIframe = domEl('iframe', {
     src: overlayURL, 
     style: 'height: ' + initialHeight + 'px; display: none;',
-    sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
+    sandbox: IFRAME_SANDBOX,
     'data-cache-buster': Date.now().toString()
   });
 
@@ -484,7 +417,7 @@ function createOverlay() {
       const newHeight = getPageHeight();
       if (newHeight > initialHeight) pxpIframe.style.height = newHeight + 'px';
     }
-  }, 100);
+  }, HEIGHT_CHECK_DELAY);
 
   // Add iframe load event to sync scroll position
   pxpIframe.addEventListener('load', () => {
@@ -511,28 +444,26 @@ function createOverlay() {
     } else {
       // Server is up - show iframe and clear any existing error message
       pxpIframe.style.display = '';
-      const errorOverlay = document.getElementById('pxp-error-message');
-      if (errorOverlay) errorOverlay.remove();
+      removeErrorMessage();
     }
   });
 
   // Apply invert filter if previously saved
-  const storedInverted = localStorage.getItem('pixelPerfectInverted');
-  if (storedInverted === 'true') {
+  if (pxpSettings.getInverted()) {
     pxpIsInverted = true;
     pxpIframe.style.filter = 'invert(1)';
     pxpIframe.style.backgroundColor = 'white'; // Add white background for inversion
   }
 
   // Apply stored opacity to iframe
-  const iframeStoredOpacity = localStorage.getItem('pixelPerfectOpacity');
-  if (iframeStoredOpacity) {
-    const opacity = parseInt(iframeStoredOpacity) / 100;
+  const iframeOpacity = pxpSettings.getOpacity();
+  if (iframeOpacity !== 100) {
+    const opacity = iframeOpacity / 100;
     pxpIframe.style.opacity = opacity;
-    ppLastOpacityValue = parseInt(iframeStoredOpacity);
+    ppLastOpacityValue = iframeOpacity;
   }
 
-  ppControls = div({id: 'pxp-controls', class: 'top'}); // Default to top positioning
+  pxpControls = div({id: 'pxp-controls', class: 'top'}); // Default to top positioning
 
   const ppIcon = div({id: 'pixel-perfect-icon'},
     img({src: chrome.runtime.getURL('icons/pixel-perfect.svg'), alt: 'Pixel Perfect'}),
@@ -542,11 +473,11 @@ function createOverlay() {
   const urlContainer = div({id: 'url-container'});
 
   // Set input value to stored URL or default
-  const inputStoredUrl = localStorage.getItem('pixelPerfectUrl');
-  let inputUrl = inputStoredUrl || 'http://localhost:3000/';
+  const inputStoredUrl = pxpUrls.getStoredUrl();
+  let inputUrl = inputStoredUrl;
 
   // Check if Sync URL Path is enabled
-  const syncUrlPathEnabled = localStorage.getItem('pixelPerfectSyncUrlPath') === 'true';
+  const syncUrlPathEnabled = pxpSettings.getSyncUrlPath();
   if (syncUrlPathEnabled) {
     // Get current page URL path
     const currentUrl = window.location.href;
@@ -584,14 +515,9 @@ function createOverlay() {
   const openOverlayUrl = div({
       id: 'open-overlay-url',
       title: 'Open overlay in new tab'
-    },
-    img({
-      src: chrome.runtime.getURL('icons/new-window.svg'),
-      alt: 'Open in new tab',
-      width: '16',
-      height: '16'
-    })
+    }
   );
+  openOverlayUrl.innerHTML = '<svg width="16" height="16" viewBox="0 0 358.05 355.34" xmlns="http://www.w3.org/2000/svg"><path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/><path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/></svg>';
 
   openOverlayUrl.addEventListener('click', () => {
     if (pxpIframe && pxpIframe.src) {
@@ -602,8 +528,7 @@ function createOverlay() {
   });
 
   // Get stored opacity value or default to 100
-  const storedOpacity = localStorage.getItem('pixelPerfectOpacity');
-  const initialValue = parseInt(storedOpacity) || 100;
+  const initialValue = pxpSettings.getOpacity();
 
   const sliderContainer = div({id: 'opacity-slider'},
     div({id: 'slider-track'}),
@@ -616,16 +541,14 @@ function createOverlay() {
   const sliderFill = sliderContainer.querySelector('#slider-fill');
 
   // Set percentage text to match stored opacity
-  const textStoredOpacity = localStorage.getItem('pixelPerfectOpacity');
-  const opacityValue = textStoredOpacity || '100';
+  const opacityValue = pxpSettings.getOpacity().toString();
   const value = span({id: 'opacity-value', title: 'Current opacity value'}, opacityValue + '%');
 
   // Add invert toggle button
   const invertBtn = div({class: 'invert btn'}, 'Invert');
 
   // Restore invert state from localStorage
-  const buttonStoredInverted = localStorage.getItem('pixelPerfectInverted');
-  if (buttonStoredInverted === 'true') {
+  if (pxpSettings.getInverted()) {
     pxpIsInverted = true;
     invertBtn.classList.add('active');
   }
@@ -659,8 +582,7 @@ function createOverlay() {
 
   // Add on/off toggle switch
   // Restore toggle state from localStorage or default to ON
-  const savedToggleState = localStorage.getItem('pixelPerfectOn');
-  const isChecked = savedToggleState !== 'false'; // Default to true (ON) unless explicitly set to false
+  const isChecked = pxpSettings.getToggleState(); // Default to true (ON) unless explicitly set to false
 
   const onOffToggle = label({
       class: 'on-off switch',
@@ -675,9 +597,9 @@ function createOverlay() {
   const toggleInput = onOffToggle.querySelector('input');
 
   const updateControlsClass = () => {
-    if (ppControls) {
-      ppControls.classList.remove('on', 'off');
-      ppControls.classList.add(toggleInput.checked ? 'on' : 'off');
+      if (pxpControls) {
+    pxpControls.classList.remove('on', 'off');
+    pxpControls.classList.add(toggleInput.checked ? 'on' : 'off');
     }
   };
 
@@ -711,7 +633,7 @@ function createOverlay() {
   urlInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
       // Store URL in localStorage and reload page to bypass CSP
-      localStorage.setItem('pixelPerfectUrl', urlInput.value);
+      pxpUrls.setStoredUrl(urlInput.value);
       window.location.reload();
     }
   });
@@ -817,7 +739,7 @@ function createOverlay() {
     pxpIframe.style.opacity = opacity;
     value.textContent = Math.round(percentage) + '%';
     ppLastOpacityValue = Math.round(percentage);
-    localStorage.setItem('pixelPerfectOpacity', Math.round(percentage).toString());
+    pxpSettings.setOpacity(Math.round(percentage));
   }
 
   // Add change handler to toggle switch
@@ -862,7 +784,7 @@ function createOverlay() {
       }
 
       // Save toggle state to localStorage
-      localStorage.setItem('pixelPerfectOn', 'true');
+      pxpSettings.setToggleState(true);
     } else {
       // Store current opacity before turning off
       const currentLeft = parseFloat(sliderThumb.style.left) || 0;
@@ -876,7 +798,6 @@ function createOverlay() {
       sliderContainer.classList.add('disabled');
       sliderContainer.style.pointerEvents = 'none';
       urlInput.disabled = false; // Keep URL input enabled
-      // invertBtn.disabled = false; // Keep invert button enabled
       scrollModeSelect.disabled = false; // Keep scroll mode enabled
 
       // Move slider to 0 and set 50% opacity for OFF state
@@ -890,7 +811,7 @@ function createOverlay() {
       if (errorOverlay) errorOverlay.remove();
 
       // Save toggle state to localStorage
-      localStorage.setItem('pixelPerfectOn', 'false');
+      pxpSettings.setToggleState(false);
     }
   });
 
@@ -908,7 +829,7 @@ function createOverlay() {
     }
 
     // Save invert setting to localStorage
-    localStorage.setItem('pixelPerfectInverted', pxpIsInverted.toString());
+    pxpSettings.setInverted(pxpIsInverted);
   });
 
   // Add scroll mode custom dropdown functionality
@@ -929,20 +850,21 @@ function createOverlay() {
   // Handle dropdown option clicks
   scrollModeDropdown.addEventListener('click', function (e) {
     // Find the dropdown option that was clicked (could be the target or a parent)
-    const dropdownOption = e.target.closest('.dropdown-option');
+    const dropdownOption = e.target.closest('.pxp-dropdown-option');
 
     if (dropdownOption) {
       e.stopPropagation(); // Prevent event from bubbling up to button click
 
       const newMode = dropdownOption.dataset.value;
       pxpScrollMode = newMode;
+      pxpSettings.setScrollMode(newMode);
 
       // Update button text
       const buttonText = scrollModeSelect.querySelector('span');
       buttonText.textContent = dropdownOption.querySelector('span:last-child').textContent;
 
       // Update selected state
-      this.querySelectorAll('.dropdown-option').forEach(option => {
+      this.querySelectorAll('.pxp-dropdown-option').forEach(option => {
         option.classList.remove('selected');
         option.querySelector('.checkmark').textContent = '';
       });
@@ -999,7 +921,7 @@ function createOverlay() {
     )
   );
 
-  settingsMenu.appendChild(dockOption);
+  
 
 
   // dark theme setting
@@ -1011,18 +933,10 @@ function createOverlay() {
     )
   );
 
-  settingsMenu.appendChild(darkThemeOption);
 
   // Set default dark theme state
   const darkThemeToggle = darkThemeOption.querySelector('#dark-theme-toggle');
-  const savedTheme = localStorage.getItem('pixelPerfectDarkTheme');
-  if (savedTheme !== null) {
-    darkThemeToggle.checked = savedTheme === 'true';
-  } else {
-    // Default to dark theme
-    darkThemeToggle.checked = true;
-    localStorage.setItem('pixelPerfectDarkTheme', 'true');
-  }
+  darkThemeToggle.checked = pxpSettings.getDarkTheme();
 
   // Sync URL path setting
   const syncUrlPathOption = div({class: 'settings-option'},
@@ -1033,22 +947,14 @@ function createOverlay() {
     )
   );
 
-  settingsMenu.appendChild(syncUrlPathOption);
 
   // Set default sync URL path state
   const syncUrlPathToggle = syncUrlPathOption.querySelector('#sync-url-path-toggle');
-  const savedSyncUrlPath = localStorage.getItem('pixelPerfectSyncUrlPath');
-  if (savedSyncUrlPath !== null) {
-    syncUrlPathToggle.checked = savedSyncUrlPath === 'true';
-  } else {
-    // Default to disabled
-    syncUrlPathToggle.checked = false;
-    localStorage.setItem('pixelPerfectSyncUrlPath', 'false');
-  }
+  syncUrlPathToggle.checked = pxpSettings.getSyncUrlPath();
 
 
-  // Add settings menu to controls
-  ppControls.appendChild(settingsMenu);
+  settingsMenu.append(dockOption, darkThemeOption, syncUrlPathOption);
+  pxpControls.appendChild(settingsMenu);
 
   // Settings button click handler
   settingsBtn.addEventListener('click', function () {
@@ -1072,19 +978,19 @@ function createOverlay() {
   // Dock functionality
   function dockControls(position) {
     // Remove any existing positioning and classes
-    ppControls.style.transform = '';
-    ppControls.style.left = '';
-    ppControls.style.right = '';
-    ppControls.classList.remove('top', 'bottom');
+    pxpControls.style.transform = '';
+    pxpControls.style.left = '';
+    pxpControls.style.right = '';
+    pxpControls.classList.remove('top', 'bottom');
 
     if (position === 'top') {
-      ppControls.classList.add('top');
+      pxpControls.classList.add('top');
     } else if (position === 'bottom') {
-      ppControls.classList.add('bottom');
+      pxpControls.classList.add('bottom');
     }
 
     // Save dock position to localStorage
-    localStorage.setItem('pixelPerfectDockPosition', position);
+    pxpSettings.setDockPosition(position);
   }
 
   // Add dock button event listeners
@@ -1102,26 +1008,26 @@ function createOverlay() {
   document.addEventListener('change', function (e) {
     if (e.target.id === 'dark-theme-toggle') {
       const isDark = e.target.checked;
-      localStorage.setItem('pixelPerfectDarkTheme', isDark.toString());
+      pxpSettings.setDarkTheme(isDark);
 
       // Apply theme to controls
       if (isDark) {
-        ppControls.classList.add('dark-theme');
-        ppControls.classList.remove('light-theme');
+        pxpControls.classList.add('dark-theme');
+        pxpControls.classList.remove('light-theme');
       } else {
-        ppControls.classList.add('light-theme');
-        ppControls.classList.remove('dark-theme');
+        pxpControls.classList.add('light-theme');
+        pxpControls.classList.remove('dark-theme');
       }
     } else if (e.target.id === 'sync-url-path-toggle') {
       const isSyncEnabled = e.target.checked;
-      localStorage.setItem('pixelPerfectSyncUrlPath', isSyncEnabled.toString());
+      pxpSettings.setSyncUrlPath(isSyncEnabled);
 
       if (isSyncEnabled) {
         // Check if current overlay URL path matches the page URL path
         const currentPageUrl = window.location.href;
         const currentPagePath = new URL(currentPageUrl).pathname;
 
-        const storedOverlayUrl = localStorage.getItem('pixelPerfectUrl') || 'http://localhost:3000/';
+        const storedOverlayUrl = pxpUrls.getStoredUrl();
         let overlayUrlPath;
 
         try {
@@ -1145,23 +1051,16 @@ function createOverlay() {
   });
 
   // Restore dock position from localStorage or default to top
-  const savedDockPosition = localStorage.getItem('pixelPerfectDockPosition');
-  if (savedDockPosition) {
-    dockControls(savedDockPosition);
-  } else {
-    // Default to top if no saved position
-    dockControls('top');
-  }
+  const savedDockPosition = pxpSettings.getDockPosition();
+  dockControls(savedDockPosition);
 
   // Apply initial theme
-  const initialTheme = localStorage.getItem('pixelPerfectDarkTheme');
-  if (initialTheme === 'false') {
-    ppControls.classList.add('light-theme');
-    ppControls.classList.remove('dark-theme');
+  if (pxpSettings.getDarkTheme()) {
+    pxpControls.classList.add('dark-theme');
+    pxpControls.classList.remove('light-theme');
   } else {
-    // Default to dark theme
-    ppControls.classList.add('dark-theme');
-    ppControls.classList.remove('light-theme');
+    pxpControls.classList.add('light-theme');
+    pxpControls.classList.remove('dark-theme');
   }
 
 
@@ -1179,23 +1078,24 @@ function createOverlay() {
   window.addEventListener('scroll', throttle(syncIframeScroll, 10), {passive: true});
 
   // Add elements to URL container
-  urlContainer.appendChild(urlInput);
-  urlContainer.appendChild(openOverlayUrl);
+  urlContainer.append(urlInput, openOverlayUrl);
 
-  ppControls.appendChild(ppIcon);
-  ppControls.appendChild(onOffToggle);
-  ppControls.appendChild(urlContainer);
-  ppControls.appendChild(sliderContainer);
-  ppControls.appendChild(value);
-  ppControls.appendChild(invertBtn);
-  ppControls.appendChild(scrollModeSelect);
-  ppControls.appendChild(settingsBtn);
-  ppControls.appendChild(closeBtn);
+  pxpControls.append(
+    ppIcon, 
+    onOffToggle,
+    urlContainer,
+    sliderContainer,
+    value,
+    invertBtn,
+    scrollModeSelect,
+    settingsBtn,
+    closeBtn
+  );
+
   pxpOverlay.appendChild(pxpIframe);
 
   // Check toggle state and set overlay visibility accordingly
-  const overlayToggleState = localStorage.getItem('pixelPerfectOn');
-  const shouldShowOverlay = overlayToggleState !== 'false'; // Default to true unless explicitly false
+  const shouldShowOverlay = pxpSettings.getToggleState(); // Default to true unless explicitly false
 
   // Ensure toggle input state matches the stored state
   if (toggleInput) {
@@ -1221,6 +1121,6 @@ function createOverlay() {
 
   // Add both overlay and controls as siblings to body
   document.body.appendChild(pxpOverlay);
-  document.body.appendChild(ppControls);
+  document.body.appendChild(pxpControls);
 
 }

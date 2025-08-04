@@ -19,7 +19,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     try {
       await chrome.tabs.sendMessage(tab.id, { action: "ping" });
     } catch (error) {
-      // Inject the CSS and content script
+      // Inject the CSS and content scripts
       await chrome.scripting.insertCSS({
         target: { tabId: tab.id },
         files: ['pixel-perfect.css']
@@ -27,7 +27,7 @@ chrome.action.onClicked.addListener(async (tab) => {
       
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['content.js']
+        files: ['utils.js', 'content.js']
       });
     }
     
@@ -62,7 +62,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       
       if (data?.active === 'true') {
         
-        // Inject CSS and content script
+        // Inject CSS and content scripts
         await chrome.scripting.insertCSS({
           target: { tabId: tabId },
           files: ['pixel-perfect.css']
@@ -70,7 +70,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
-          files: ['content.js']
+          files: ['utils.js', 'content.js']
         });
         
         // Send message to auto-create overlay

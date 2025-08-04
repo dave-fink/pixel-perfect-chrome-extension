@@ -82,6 +82,7 @@
     position: relative;
     display: inline-block;
     transition: all 0.2s ease;
+    /* display: none; */
 
     .off & {
       filter: grayscale(100%);
@@ -133,30 +134,14 @@
       right: 6px;
       transform: translateY(-50%);
       z-index: 999;
-      color: var(--text-color);
       cursor: pointer;
-      color: var(--text-color);
+      fill: var(--text-color);
 
-      img {
-        opacity: 0.5;
-        transition: all 100ms ease-in-out;
-        width: 16px;
-        height: 16px;
-        display: block;
-      }
+      /* new window icon */
+      svg { opacity: .8; transition: opacity 0.2s ease-in-out; }
+      &:hover svg{ opacity: 1; }
 
-      img[src*="new-window.svg"] {
-        /* filter: brightness(0) saturate(100%) invert(1); */
-      }
-
-      &:hover img[src*="new-window.svg"] {
-        opacity: 1;
-        /* filter: brightness(0) saturate(100%) invert(1) hue-rotate(200deg); */
-      }
-
-      img[src*="error.svg"] {
-        opacity: 1;
-      }
+      img[src*="error.svg"] { opacity: 1; }
     }
   }
 
