@@ -5,6 +5,13 @@ chrome.runtime.onStartup.addListener(async () => {
 
 chrome.runtime.onInstalled.addListener(async () => {
   await updateToolbarIcon(false);
+  
+  // Create context menu
+  chrome.contextMenus.create({
+    id: "showInstructions",
+    title: "Show Instructions",
+    contexts: ["action"]
+  });
 });
 
 // Handle extension icon click
@@ -52,8 +59,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         target: { tabId: tabId },
         func: () => {
           return {
-            url: localStorage.getItem('pixelPerfectUrl'),
-            active: localStorage.getItem('pixelPerfectActive')
+            url: localStorage.getItem('pxpUrl'),
+            active: localStorage.getItem('pxpActive')
           };
         }
       });
@@ -84,6 +91,34 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
           !error.message.includes('showing error page')) {
         console.error('Error auto-injecting:', error);
       }
+    }
+  }
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "showInstructions") {
+    // Skip restricted pages
+    if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('about:') || tab.url.startsWith('edge://') || tab.url.startsWith('moz-extension://')) {
+      return;
+    }
+    
+    try {
+      // Inject scripts if needed
+      await chrome.scripting.insertCSS({
+        target: { tabId: tab.id },
+        files: ['pixel-perfect.css']
+      });
+      
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['utils.js', 'content.js']
+      });
+      
+      // Send message to show instructions
+      await chrome.tabs.sendMessage(tab.id, { action: "showInstructions" });
+    } catch (error) {
+      console.error('Error showing instructions:', error);
     }
   }
 });

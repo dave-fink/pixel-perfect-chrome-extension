@@ -22,6 +22,9 @@ function input(...items) { return domEl('input', ...items); }
 function img(...items) { return domEl('img', ...items); }
 function link(...items) { return domEl('link', ...items); }
 function a(...items) { return domEl('a', ...items); }
+function b(...items) { return domEl('b', ...items); }
+function ol(...items) { return domEl('ol', ...items); }
+function li(...items) { return domEl('li', ...items); }
 
 // Utility function to get page height
 function getPageHeight() {
@@ -37,7 +40,7 @@ function getPageHeight() {
 
 // Utility function to process URLs with path syncing
 function processUrlWithPathSync(baseUrl, currentPath) {
-  const syncUrlPathEnabled = localStorage.getItem('pixelPerfectSyncUrlPath') === 'true';
+  const syncUrlPathEnabled = localStorage.getItem('pxpSyncUrlPath') === 'true';
   
   if (!syncUrlPathEnabled) {
     return baseUrl;
@@ -60,85 +63,47 @@ function processUrlWithPathSync(baseUrl, currentPath) {
   }
 }
 
-// Utility function to remove error message
-function removeErrorMessage() {
-  const errorOverlay = document.getElementById('pxp-error-message');
-  if (errorOverlay) errorOverlay.remove();
-}
+
+
+
 
 // Centralized URL management
 const pxpUrls = {
-  getStoredUrl() {
-    return localStorage.getItem('pixelPerfectUrl') || DEFAULT_URL;
-  },
-  setStoredUrl(url) {
-    localStorage.setItem('pixelPerfectUrl', url);
-  },
-  getUrlWithPathSync() {
-    const baseUrl = this.getStoredUrl();
+  getStoredUrl: () => localStorage.getItem('pxpUrl') || '',
+  setStoredUrl: (url) => localStorage.setItem('pxpUrl', url),
+  getUrlWithPathSync: () => {
+    const baseUrl = pxpUrls.getStoredUrl();
     const syncUrlPath = pxpSettings.getSyncUrlPath();
     return syncUrlPath ? processUrlWithPathSync(baseUrl, window.location.pathname) : baseUrl;
   },
-  getIframeUrl() {
-    const url = this.getUrlWithPathSync();
+  getIframeUrl: () => {
+    const url = pxpUrls.getUrlWithPathSync();
     return url + (url.includes('?') ? '&' : '?') + CACHE_BUSTER_PARAM + '=' + Date.now();
   },
-  getBaseUrl() {
-    return this.getStoredUrl();
-  }
+  getBaseUrl: () => pxpUrls.getStoredUrl()
 };
 
 // Centralized settings management
 const pxpSettings = {
-  getActive() {
-    return localStorage.getItem('pixelPerfectActive') === 'true';
+  getActive: () => localStorage.getItem('pxpActive') === 'true',
+  setActive: (active) => localStorage.setItem('pxpActive', active.toString()),
+  getOpacity: () => parseInt(localStorage.getItem('pxpOpacity')) || 100,
+  setOpacity: (opacity) => localStorage.setItem('pxpOpacity', opacity.toString()),
+  getInverted: () => localStorage.getItem('pxpInverted') === 'true',
+  setInverted: (inverted) => localStorage.setItem('pxpInverted', inverted.toString()),
+  getOverlayState: () => localStorage.getItem('pxpOverlayOn') !== 'false',
+  setOverlayState: (state) => localStorage.setItem('pxpOverlayOn', state.toString()),
+  getScrollMode: () => localStorage.getItem('pxpScrollMode') || 'both',
+  setScrollMode: (mode) => localStorage.setItem('pxpScrollMode', mode),
+  getDockPosition: () => localStorage.getItem('pxpDockPosition') || 'top',
+  setDockPosition: (position) => localStorage.setItem('pxpDockPosition', position),
+  getDarkTheme: () => {
+    const saved = localStorage.getItem('pxpDarkTheme');
+    return saved !== null ? saved === 'true' : true;
   },
-  setActive(active) {
-    localStorage.setItem('pixelPerfectActive', active.toString());
-  },
-  getOpacity() {
-    return parseInt(localStorage.getItem('pixelPerfectOpacity')) || 100;
-  },
-  setOpacity(opacity) {
-    localStorage.setItem('pixelPerfectOpacity', opacity.toString());
-  },
-  getInverted() {
-    return localStorage.getItem('pixelPerfectInverted') === 'true';
-  },
-  setInverted(inverted) {
-    localStorage.setItem('pixelPerfectInverted', inverted.toString());
-  },
-  getToggleState() {
-    return localStorage.getItem('pixelPerfectOn') !== 'false'; // Default to true
-  },
-  setToggleState(state) {
-    localStorage.setItem('pixelPerfectOn', state.toString());
-  },
-  getScrollMode() {
-    return localStorage.getItem('pixelPerfectScrollMode') || 'both';
-  },
-  setScrollMode(mode) {
-    localStorage.setItem('pixelPerfectScrollMode', mode);
-  },
-  getDockPosition() {
-    return localStorage.getItem('pixelPerfectDockPosition') || 'top';
-  },
-  setDockPosition(position) {
-    localStorage.setItem('pixelPerfectDockPosition', position);
-  },
-  getDarkTheme() {
-    const saved = localStorage.getItem('pixelPerfectDarkTheme');
-    return saved !== null ? saved === 'true' : true; // Default to true
-  },
-  setDarkTheme(dark) {
-    localStorage.setItem('pixelPerfectDarkTheme', dark.toString());
-  },
-  getSyncUrlPath() {
-    return localStorage.getItem('pixelPerfectSyncUrlPath') === 'true';
-  },
-  setSyncUrlPath(sync) {
-    localStorage.setItem('pixelPerfectSyncUrlPath', sync.toString());
-  }
+  setDarkTheme: (dark) => localStorage.setItem('pxpDarkTheme', dark.toString()),
+  getSyncUrlPath: () => localStorage.getItem('pxpSyncUrlPath') === 'true',
+  setSyncUrlPath: (sync) => localStorage.setItem('pxpSyncUrlPath', sync.toString())
 };
 
 // Throttle function for performance
@@ -166,9 +131,11 @@ if (typeof module !== 'undefined' && module.exports) {
     img,
     link,
     a,
+    b,
+    ol,
+    li,
     getPageHeight,
     processUrlWithPathSync,
-    removeErrorMessage,
     throttle,
     pxpUrls,
     pxpSettings
