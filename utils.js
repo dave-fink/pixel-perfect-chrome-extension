@@ -67,43 +67,48 @@ function processUrlWithPathSync(baseUrl, currentPath) {
 
 
 
-// Centralized URL management
-const pxpUrls = {
-  getStoredUrl: () => localStorage.getItem('pxpUrl') || '',
-  setStoredUrl: (url) => localStorage.setItem('pxpUrl', url),
-  getUrlWithPathSync: () => {
-    const baseUrl = pxpUrls.getStoredUrl();
-    const syncUrlPath = pxpSettings.getSyncUrlPath();
-    return syncUrlPath ? processUrlWithPathSync(baseUrl, window.location.pathname) : baseUrl;
+// Centralized pxp namespace object
+const pxp = {
+  // URL management
+  urls: {
+    getStoredUrl: () => localStorage.getItem('pxpUrl') || '',
+    setStoredUrl: (url) => localStorage.setItem('pxpUrl', url),
+    getUrlWithPathSync: () => {
+      const baseUrl = pxp.urls.getStoredUrl();
+      const syncUrlPath = pxp.settings.getSyncUrlPath();
+      return syncUrlPath ? processUrlWithPathSync(baseUrl, window.location.pathname) : baseUrl;
+    },
+    getIframeUrl: () => {
+      const url = pxp.urls.getUrlWithPathSync();
+      return url + (url.includes('?') ? '&' : '?') + CACHE_BUSTER_PARAM + '=' + Date.now();
+    },
+    getBaseUrl: () => pxp.urls.getStoredUrl()
   },
-  getIframeUrl: () => {
-    const url = pxpUrls.getUrlWithPathSync();
-    return url + (url.includes('?') ? '&' : '?') + CACHE_BUSTER_PARAM + '=' + Date.now();
-  },
-  getBaseUrl: () => pxpUrls.getStoredUrl()
-};
 
-// Centralized settings management
-const pxpSettings = {
-  getActive: () => localStorage.getItem('pxpActive') === 'true',
-  setActive: (active) => localStorage.setItem('pxpActive', active.toString()),
-  getOpacity: () => parseInt(localStorage.getItem('pxpOpacity')) || 100,
-  setOpacity: (opacity) => localStorage.setItem('pxpOpacity', opacity.toString()),
-  getInverted: () => localStorage.getItem('pxpInverted') === 'true',
-  setInverted: (inverted) => localStorage.setItem('pxpInverted', inverted.toString()),
-  getOverlayState: () => localStorage.getItem('pxpOverlayOn') !== 'false',
-  setOverlayState: (state) => localStorage.setItem('pxpOverlayOn', state.toString()),
-  getScrollMode: () => localStorage.getItem('pxpScrollMode') || 'both',
-  setScrollMode: (mode) => localStorage.setItem('pxpScrollMode', mode),
-  getDockPosition: () => localStorage.getItem('pxpDockPosition') || 'top',
-  setDockPosition: (position) => localStorage.setItem('pxpDockPosition', position),
-  getDarkTheme: () => {
-    const saved = localStorage.getItem('pxpDarkTheme');
-    return saved !== null ? saved === 'true' : true;
+  // Settings management
+  settings: {
+    getActive: () => localStorage.getItem('pxpActive') === 'true',
+    setActive: (active) => localStorage.setItem('pxpActive', active.toString()),
+    getOpacity: () => parseInt(localStorage.getItem('pxpOpacity')) || 100,
+    setOpacity: (opacity) => localStorage.setItem('pxpOpacity', opacity.toString()),
+    getInverted: () => localStorage.getItem('pxpInverted') === 'true',
+    setInverted: (inverted) => localStorage.setItem('pxpInverted', inverted.toString()),
+    getOverlayState: () => localStorage.getItem('pxpOverlayOn') !== 'false',
+    setOverlayState: (state) => localStorage.setItem('pxpOverlayOn', state.toString()),
+    getScrollMode: () => localStorage.getItem('pxpScrollMode') || 'both',
+    setScrollMode: (mode) => localStorage.setItem('pxpScrollMode', mode),
+    getDockPosition: () => localStorage.getItem('pxpDockPosition') || 'top',
+    setDockPosition: (position) => localStorage.setItem('pxpDockPosition', position),
+    getDarkTheme: () => {
+      const saved = localStorage.getItem('pxpDarkTheme');
+      return saved !== null ? saved === 'true' : true;
+    },
+    setDarkTheme: (dark) => localStorage.setItem('pxpDarkTheme', dark.toString()),
+    getSyncUrlPath: () => localStorage.getItem('pxpSyncUrlPath') === 'true',
+    setSyncUrlPath: (sync) => localStorage.setItem('pxpSyncUrlPath', sync.toString())
   },
-  setDarkTheme: (dark) => localStorage.setItem('pxpDarkTheme', dark.toString()),
-  getSyncUrlPath: () => localStorage.getItem('pxpSyncUrlPath') === 'true',
-  setSyncUrlPath: (sync) => localStorage.setItem('pxpSyncUrlPath', sync.toString())
+
+
 };
 
 // Throttle function for performance
@@ -137,7 +142,6 @@ if (typeof module !== 'undefined' && module.exports) {
     getPageHeight,
     processUrlWithPathSync,
     throttle,
-    pxpUrls,
-    pxpSettings
+    pxp
   };
 } 

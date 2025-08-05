@@ -34,7 +34,7 @@ chrome.action.onClicked.addListener(async (tab) => {
       
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['utils.js', 'content.js']
+        files: ['utils.js', 'pixel-perfect.js']
       });
     }
     
@@ -77,7 +77,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
-          files: ['utils.js', 'content.js']
+          files: ['utils.js', 'pixel-perfect.js']
         });
         
         // Send message to auto-create overlay
@@ -112,7 +112,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['utils.js', 'content.js']
+        files: ['utils.js', 'pixel-perfect.js']
       });
       
       // Send message to show instructions

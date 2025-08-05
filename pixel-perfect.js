@@ -1,61 +1,61 @@
-// INSPECTING - add a button to inspect the iframe
-// vh measurement issue, when changing viewport sync scrollign is a problem
-// custom scrollbars when using chrome mobile view can cause problems
-
-
 // Global error state management
 let currentError = null;
 
 // Show error in settings panel
 function showErrorInSettings(url, errorDetails = '') {
-  currentError = { url, errorDetails };
-  
+  currentError = {url, errorDetails};
+
   // Open settings menu to show error
   const settingsMenu = document.getElementById('settings-menu');
   if (settingsMenu) {
     settingsMenu.style.display = 'block';
   }
-  
+
+  // Add error class to overlay if it exists
+  const overlay = document.getElementById('pxp-overlay');
+  if (overlay)  overlay.classList.add('error');
+
   // Update error display in settings
   updateSettingsErrorDisplay(url, errorDetails);
 }
 
-  // Update error display in settings panel
-  function updateSettingsErrorDisplay(url, errorDetails) {
-    // Remove existing error message
-    const existingError = document.querySelector('.url-error-message');
-    if (existingError) existingError.remove();
-    
-    // Add error class to input field
-    const urlInput = document.querySelector('#url-input');
-    if (urlInput) {
-      urlInput.classList.add('error');
-      console.log('Added error class to input, classes:', urlInput.className);
-    } else {
-      console.log('URL input not found');
-    }
-    
-    // Create new error message
-    const errorElement = div({class: 'url-error-message'},
-      span({class: 'error-title'}, errorDetails),
-    );
-    
-    // Insert error message inside the URL input container as the last item
-    const urlInputContainer = document.querySelector('.url-input-container');
-    if (urlInputContainer) urlInputContainer.appendChild(errorElement);
-  }
+// Update error display in settings panel
+function updateSettingsErrorDisplay(url, errorDetails) {
+  // Remove existing error message
+  const existingError = document.querySelector('.url-error-message');
+  if (existingError) existingError.remove();
+
+  // Add error class to input wrapper
+  const urlInput = document.querySelector('#url-input');
+  const inputWrapper = urlInput?.parentNode;
+  if (inputWrapper) inputWrapper.classList.add('error'); 
+
+  // Create new error message
+  const errorElement = div({class: 'url-error-message'},
+    span({class: 'error-title'}, errorDetails),
+  );
+
+  // Insert error message inside the URL input container as the last item
+  const urlInputContainer = document.querySelector('.url-input-container');
+  if (urlInputContainer) urlInputContainer.appendChild(errorElement);
+}
 
 // Clear error display
 function clearSettingsError() {
   currentError = null;
-  
+
   // Remove error message
   const existingError = document.querySelector('.url-error-message');
   if (existingError) existingError.remove();
-  
-  // Remove error class from input field
+
+  // Remove error class from input wrapper
   const urlInput = document.querySelector('#url-input');
-  if (urlInput) urlInput.classList.remove('error');
+  const inputWrapper = urlInput?.parentNode;
+  if (inputWrapper) inputWrapper.classList.remove('error');
+
+  // Remove error class from overlay
+  const overlay = document.getElementById('pxp-overlay');
+  if (overlay) overlay.classList.remove('error');
 }
 
 // Legacy function for backward compatibility
@@ -82,11 +82,11 @@ let pxpControls = null;
 let pxpIframe = null;
 let pxpIsInverted = false;
 let pxpLastOpacityValue = 100;
-let pxpScrollMode = pxpSettings.getScrollMode();
+let pxpScrollMode = pxp.settings.getScrollMode();
 let pxpIsActive = false;
 let originalFavicon = null;
 
-function updateTab(isActive) {
+function updateBrowserTab(isActive) {
   // Store original favicon on first call
   if (!originalFavicon) {
     const existingFavicon = document.querySelector('link[rel="icon"]') ||
@@ -101,7 +101,7 @@ function updateTab(isActive) {
     if (!originalTitle.includes('(px)')) {
       document.title = '(px) ' + originalTitle;
     }
-    
+
     // Create canvas for favicon overlay
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -155,10 +155,10 @@ function updateTab(isActive) {
             throw new Error('Root favicon not found');
           }
         })
-        .catch(() => createDefaultFavicon());
+        .catch(() => updateFavicon());
     };
 
-    function createDefaultFavicon() {
+    function updateFavicon() {
       const domain = window.location.hostname;
       const initial = domain.charAt(0).toUpperCase();
 
@@ -216,8 +216,6 @@ function updateTab(isActive) {
     }
   }
 }
-
-
 
 
 // Debounced scroll sync for better performance
@@ -313,7 +311,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       createOverlay();
       pxpIsActive = true;
       // Store active state
-      pxpSettings.setActive(true);
+      pxp.settings.setActive(true);
       // Update toolbar icon to colored
       chrome.runtime.sendMessage({action: 'updateIcon', active: true}, (response) => {
         if (chrome.runtime.lastError) {
@@ -321,8 +319,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       });
 
-      updateTab(true);
-      }
+      updateBrowserTab(true);
+    }
   } else if (request.action === "showInstructions") {
     showInstructions();
   }
@@ -332,50 +330,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function showInstructions() {
   // Create overlay if it doesn't exist
   if (!pxpOverlay) createOverlay();
-  
+
   // Add instructions class to overlay
   pxpOverlay.classList.add('instructions');
-  
+
   // Remove any existing instructions overlay first
   const existingInstructions = document.getElementById('pxp-instructions-overlay');
   if (existingInstructions) existingInstructions.remove();
-  
+
   // Check if this is first-time user
   const isFirstTimeForInstructions = localStorage.getItem('pxpActive') === null;
-  
+
   // Create and show instructions overlay
   const instructionsOverlay = div({id: 'pxp-instructions-overlay'});
-  
-  const instructionsContent = div({id: 'pxp-instructions'}, 
-    div({class: 'pxp-title'}, 
+
+  const instructionsContent = div({id: 'pxp-instructions'},
+    div({class: 'pxp-title'},
       img({
         src: chrome.runtime.getURL('icons/pixel-perfect.svg'),
         style: 'width: 34px; height: 34px; margin-right: 12px; vertical-align: middle;'
       }),
-      'Pixel Perfect Overlay (FIRST TIME)'
+      'Pixel Perfect Overlay'
     ),
-    div({class: 'pxp-message'}, 
+    div({class: 'pxp-description'},
       'Overlay your local dev page on any live page to quickly identify layout differences and adjust with precision.'
     ),
-    div({class: 'pxp-steps'}, 
+    div({class: 'pxp-steps'},
       ol({},
-        li('Enter your local dev URL in the ', b('Overlay URL'), ' field'),
-        li('Adjust the ', b('opacity'), ' slider and ', b('invert'), ' button'),
+        li('Enter your dev URL ', b('Overlay URL')),
+        li('Play with the ', b('opacity'), ' and ', b('invert'), ' colors'),
         li(b('Align'), ' elements ', b('instantly'), ' as you develop'),
-        li(b('Toggle on/off'), ' to compare - ', b('no more tab switching!')), 
+        li(b('Toggle on/off'), ' to compare - ', b('no more tab switching!')),
       )
     ),
     div({class: 'pxp-button'}, 'Get started!'),
   );
-  
+
   instructionsOverlay.appendChild(instructionsContent);
   document.body.appendChild(instructionsOverlay);
-  
+
   // Close instructions when clicking the button
   instructionsContent.querySelector('.pxp-button').addEventListener('click', () => {
     instructionsOverlay.remove();
     if (pxpOverlay) pxpOverlay.classList.remove('instructions');
-    
+
     // For first-time users, show settings menu and ensure extension is OFF
     if (isFirstTimeForInstructions) {
       const settingsMenuElement = document.getElementById('settings-menu');
@@ -386,8 +384,8 @@ function showInstructions() {
 
 // Check if we should auto-create overlay on page load
 function autoRestoreOverlay() {
-  const storedUrl = pxpUrls.getStoredUrl();
-  const isActive = pxpSettings.getActive();
+  const storedUrl = pxp.urls.getStoredUrl();
+  const isActive = pxp.settings.getActive();
 
   // If no active state is stored, default to active (true)
   // This ensures the extension works when localStorage is cleared
@@ -400,7 +398,7 @@ function autoRestoreOverlay() {
         createOverlay();
         pxpIsActive = true;
         // Store active state
-        pxpSettings.setActive(true);
+        pxp.settings.setActive(true);
         // Update toolbar icon to colored
         chrome.runtime.sendMessage({action: 'updateIcon', active: true}, (response) => {
           if (chrome.runtime.lastError) {
@@ -409,7 +407,7 @@ function autoRestoreOverlay() {
         });
 
         // Update favicon to show extension is active
-        updateTab(true);
+        updateBrowserTab(true);
       }
     }, 500);
   }
@@ -436,7 +434,7 @@ function toggleOverlay() {
     if (pxpOverlay) pxpOverlay.remove();
     if (overlayInDOM) overlayInDOM.remove();
     if (controlsInDOM) controlsInDOM.remove();
-    
+
     // Remove error message if it exists
     clearSettingsError();
 
@@ -460,7 +458,7 @@ function toggleOverlay() {
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
 
     // Store inactive state
-    pxpSettings.setActive(false);
+    pxp.settings.setActive(false);
     // Update toolbar icon to gray
     chrome.runtime.sendMessage({action: 'updateIcon', active: false}, (response) => {
       if (chrome.runtime.lastError) {
@@ -469,14 +467,14 @@ function toggleOverlay() {
     });
 
     // Restore original favicon
-    updateTab(false);
+    updateBrowserTab(false);
   } else {
-    // Set overlay to OFF state when extension is first activated
-    pxpSettings.setOverlayState(false);
+    // First Load - set overlay to OFF
+    pxp.settings.setOverlayState(false);
     createOverlay();
     pxpIsActive = true;
     // Store active state
-    pxpSettings.setActive(true);
+    pxp.settings.setActive(true);
     // Update toolbar icon to colored
     chrome.runtime.sendMessage({action: 'updateIcon', active: true}, (response) => {
       if (chrome.runtime.lastError) {
@@ -485,18 +483,18 @@ function toggleOverlay() {
     });
 
     // Update favicon to show extension is active
-    updateTab(true);
+    updateBrowserTab(true);
   }
 }
 
 function loadOverlayIframe() {
   // Get URL with cache buster
-  const overlayURL = pxpUrls.getIframeUrl();
+  const overlayURL = pxp.urls.getIframeUrl();
 
   // Ensure DOM is ready (especially for hard refreshes)
   const initialHeight = getPageHeight();
   pxpIframe = domEl('iframe', {
-    src: overlayURL, 
+    src: overlayURL,
     style: 'height: ' + initialHeight + 'px; display: none;',
     sandbox: IFRAME_SANDBOX,
     'data-cache-buster': Date.now().toString()
@@ -515,8 +513,8 @@ function loadOverlayIframe() {
     showErrorInSettings(pxpIframe.src.split('?')[0], 'Failed to load overlay URL');
   });
 
-  // Error check using background script
-  chrome.runtime.sendMessage({ action: "errorCheckURL", url: overlayURL.split('?')[0] }, (response) => {
+  // TODO: IS THIS NECESSRY NOW THAT WE HAVE IT ON THE INPUT? Error check using background script
+  chrome.runtime.sendMessage({action: "errorCheckURL", url: overlayURL.split('?')[0]}, (response) => {
     if (chrome.runtime.lastError) {
       return;
     }
@@ -532,14 +530,14 @@ function loadOverlayIframe() {
   });
 
   // Apply invert filter if previously saved
-  if (pxpSettings.getInverted()) {
+  if (pxp.settings.getInverted()) {
     pxpIsInverted = true;
     pxpIframe.style.filter = 'invert(1)';
     pxpIframe.style.backgroundColor = 'white'; // Add white background for inversion
   }
 
   // Apply stored opacity to iframe
-  const iframeOpacity = pxpSettings.getOpacity();
+  const iframeOpacity = pxp.settings.getOpacity();
   if (iframeOpacity !== 100) {
     const opacity = iframeOpacity / 100;
     pxpIframe.style.opacity = opacity;
@@ -550,11 +548,32 @@ function loadOverlayIframe() {
 }
 
 function createOverlay() {
+  // Restore stored state values
+  ppLastOpacityValue = pxp.settings.getOpacity();
+  pxpIsInverted = pxp.settings.getInverted();
+  pxpScrollMode = pxp.settings.getScrollMode();
+
+  console.log('createOverlay: Restored state - opacity:', ppLastOpacityValue, 'inverted:', pxpIsInverted, 'scrollMode:', pxpScrollMode);
+
+  // Save initial values to localStorage if they don't exist (ensures defaults are persisted)
+  if (!localStorage.getItem('pxpOpacity')) {
+    console.log('createOverlay: Setting default opacity to', ppLastOpacityValue);
+    pxp.settings.setOpacity(ppLastOpacityValue);
+  }
+  if (!localStorage.getItem('pxpInverted')) {
+    console.log('createOverlay: Setting default inverted to', pxpIsInverted);
+    pxp.settings.setInverted(pxpIsInverted);
+  }
+  if (!localStorage.getItem('pxpScrollMode')) {
+    console.log('createOverlay: Setting default scroll mode to', pxpScrollMode);
+    pxp.settings.setScrollMode(pxpScrollMode);
+  }
+
   // Get URL with path syncing applied
-  const iframeUrl = pxpUrls.getUrlWithPathSync();
+  const iframeUrl = pxp.urls.getUrlWithPathSync();
 
   pxpOverlay = div({id: 'pxp-overlay'});
-  
+
   // Load the iframe using the reusable function
   pxpIframe = loadOverlayIframe();
 
@@ -580,14 +599,13 @@ function createOverlay() {
   );
 
 
-
   // Set input value to stored URL or default
-  const inputStoredUrl = pxpUrls.getStoredUrl();
+  const inputStoredUrl = pxp.urls.getStoredUrl();
   let inputUrl = inputStoredUrl;
-  
+
 
   // Check if Sync URL Path is enabled
-  const syncUrlPathEnabled = pxpSettings.getSyncUrlPath();
+  const syncUrlPathEnabled = pxp.settings.getSyncUrlPath();
   if (syncUrlPathEnabled) {
     // Get current page URL path
     const currentUrl = window.location.href;
@@ -617,199 +635,187 @@ function createOverlay() {
     type: 'text',
     placeholder: URL_PLACEHOLDER,
     value: inputUrl || '',
-    title: 'Overlay URL'
+    title: 'Overlay URL',
+    autocomplete: 'off'
   });
-  
+
   // Add focus class only when input is empty (placeholder shown)
   if (!inputUrl) urlInput.classList.add('focus');
 
+  const urlGoIcon = div({id: 'url-go-icon'});
+  urlGoIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12.293 5.293a1 1 0 011.414 1.414L10.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4z" transform="rotate(180 10 10)"/></svg>';
+  
+  const urlErrorIcon = div({id: 'url-error-icon'});
+  urlErrorIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M10 2C5.6 2 2 5.6 2 10s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm1 13H9v-2h2v2zm0-3H9V6h2v6z"/></svg>';
 
-  // Add smart URL input icon
-  const urlInputIcon = div({ id: 'url-input-icon' });
-  
-  // ===== OPTIMIZED URL INPUT HANDLING =====
-  
-  // Centralized URL validation and state management
+  const urlLockIcon = div({ id: 'url-lock-icon' });
+  urlLockIcon.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 10V8C6 5.79 7.79 4 10 4H14C16.21 4 18 5.79 18 8V10H19C19.55 10 20 10.45 20 11V19C20 19.55 19.55 20 19 20H5C4.45 20 4 19.55 4 19V11C4 10.45 4.45 10 5 10H6ZM8 8V10H16V8C16 6.9 15.1 6 14 6H10C8.9 6 8 6.9 8 8Z"/></svg>';
+
+  const urlNewWindowIcon = div({ class: 'url-new-window-icon' });
+  urlNewWindowIcon.innerHTML = '<svg viewBox="0 0 358.05 355.34" xmlns="http://www.w3.org/2000/svg"><path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/><path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/></svg>';
+
+   // Centralized URL validation and state management
   const urlInputHandler = {
     // State tracking
-    showNewWindow: false,
     lastUrlValue: '',
-    
-    // Update icon based on current state
-    updateIcon(url, validationResult = null) {
-      const { isValid, error } = validationResult || {};
+
+    // Update all icons (URL input icons + new-window icon)
+    updateUrlInputIcons(url) {
+      const storedUrl = pxp.urls.getStoredUrl();
+      const hasChanged = url.trim() !== storedUrl;
+      const isEmpty = !url.trim();
       const hasErrorMessage = document.querySelector('.url-error-message');
-      const hasFocus = urlInput.classList.contains('focus');
-      const hasError = urlInput.classList.contains('error');
+
+      // Add 'changed' class to wrapper when URL has changed
+      const inputWrapper = urlInput.parentNode;
+      if (hasChanged && !isEmpty) inputWrapper.classList.add('changed');
+      else inputWrapper.classList.remove('changed');
+
+      // Update new-window icon
+      this.newWindowIcon(url);
+    },
+
+    // Show hide new-window icon
+    newWindowIcon(url) {
+      const storedUrl = pxp.urls.getStoredUrl();
+      const hasStoredUrl = storedUrl && storedUrl.trim();
+      const urlMatchesStored = url && url.trim() === storedUrl;
       
-      // Icon state priority: new-window > error-message > focus/empty > error > valid
-      if (this.showNewWindow) {
-        this.setNewWindowIcon();
-      } else if (hasErrorMessage) {
-        this.setErrorIcon();
-      } else if (!url || hasFocus) {
-        this.setGoIcon('default');
-      } else if (hasError) {
-        this.setGoIcon('error');
-      } else {
-        this.setGoIcon('valid');
-      }
+      // Show new-window icon when we have a stored URL and input matches it
+      if (hasStoredUrl && urlMatchesStored && url !== URL_PLACEHOLDER) urlNewWindowIcon.classList.add('active');
+      else urlNewWindowIcon.classList.remove('active');
     },
-    
-    // Icon setters (cached for performance)
-    setNewWindowIcon() {
-      if (urlInputIcon.className !== 'url-input-icon new-window-icon') {
-        urlInputIcon.innerHTML = this.newWindowSvg;
-        urlInputIcon.className = 'url-input-icon new-window-icon';
-      }
-    },
-    
-    setErrorIcon() {
-      if (urlInputIcon.className !== 'url-input-icon error-icon') {
-        urlInputIcon.innerHTML = this.getErrorSvg();
-        urlInputIcon.className = 'url-input-icon error-icon';
-      }
-    },
-    
-    getErrorSvg() {
-      return `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="9" fill="none" stroke="#ff4444" stroke-width="1"/><text x="10" y="14" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#ff4444">!</text></svg>`;
-    },
-    
-    setGoIcon(type) {
-      const className = `url-input-icon go-icon${type !== 'default' ? ` ${type}` : ''}`;
-      if (urlInputIcon.className !== className) {
-        const color = type === 'error' ? '#ff4444' : type === 'valid' ? '#4a9eff' : '#666';
-        urlInputIcon.innerHTML = this.getGoSvg(color);
-        urlInputIcon.className = className;
-      }
-    },
-    
-    getGoSvg(color) {
-      return `<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="9" fill="none" stroke="${color}" stroke-width="1"/><text x="10" y="10.5" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="${color}">go</text></svg>`;
-    },
-    
-    // Cached SVG templates
-    newWindowSvg: '<svg width="16" height="16" viewBox="0 0 358.05 355.34" xmlns="http://www.w3.org/2000/svg"><path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/><path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/></svg>',
-    
+
     // Handle URL submission (Enter key or go icon click)
     submitUrl(url) {
       if (!url.trim()) return;
-      
-      // Save URL and show new window icon
-      pxpUrls.setStoredUrl(url);
-      this.showNewWindow = true;
-      this.updateIcon(url);
-      
+
+      // Save URL and update all icons
+      pxp.urls.setStoredUrl(url);
+      this.updateUrlInputIcons(url);
+
       // Check for errors and show message below input
-      chrome.runtime.sendMessage({ action: "errorCheckURL", url }, (response) => {
+      chrome.runtime.sendMessage({action: "errorCheckURL", url}, (response) => {
         if (chrome.runtime.lastError) {
           return;
         }
-        
+
         if (response && !response.accessible) {
-          // Show error in settings panel
+          // Hide existing iframe when URL is bad
+          if (pxpIframe) pxpIframe.style.display = 'none';
+          
+          // Show error in settings panel (menu stays open)
           showErrorInSettings(url, response.error || 'Unable to access URL');
-          // Update icon back to go icon with error state
-          this.showNewWindow = false;
-          this.updateIcon(url);
+          // Update icons with error state
+          this.updateUrlInputIcons(url);
         } else {
+          // Clear any existing errors
+          clearSettingsError();
+          
+          // Hide settings menu if it was open due to error
+          const settingsMenu = document.getElementById('settings-menu');
+          if (settingsMenu) settingsMenu.style.display = 'none';
+          
           // Update iframe with new URL without reloading page
           if (pxpIframe) pxpIframe.remove();
           pxpIframe = loadOverlayIframe();
           pxpOverlay.appendChild(pxpIframe);
 
+          // Ensure iframe is visible (in case it was hidden from previous error)
+          pxpIframe.style.display = '';
+
           // Turn overlay ON after successful URL submission
-          console.log('submitUrl: Valid URL submitted, turning overlay ON');
           setOverlayState(true);
         }
       });
     },
-    
+
     // Handle input changes
     handleInput(url) {
       // Handle empty input
       if (!url.trim()) {
-        urlInput.classList.remove('error');
+        const inputWrapper = urlInput.parentNode;
+        if (inputWrapper) inputWrapper.classList.remove('error');
         urlInput.classList.add('focus');
         urlInput.title = '';
         clearSettingsError();
-        this.showNewWindow = false; // Reset new window flag
-        this.updateIcon('');
+        this.updateUrlInputIcons('');
         return;
       }
-      
+
       // Remove focus and clear error message
       urlInput.classList.remove('focus');
       const existingError = document.querySelector('.url-error-message');
       if (existingError) existingError.remove();
-      
-      // Only reset new window flag if user is actually typing (not just initial load)
-      if (this.lastUrlValue !== url) {
-        this.showNewWindow = false;
-      }
+
+      // Track URL changes
       this.lastUrlValue = url;
-      
+
       // Check URL for errors using background script
-      chrome.runtime.sendMessage({ action: "errorCheckURL", url }, (response) => {
+      chrome.runtime.sendMessage({action: "errorCheckURL", url}, (response) => {
         if (chrome.runtime.lastError) {
           return;
         }
-        
+
         if (response && !response.accessible) {
-          // Show error state on input
-          urlInput.classList.add('error');
+          // Show error state on wrapper
+          const inputWrapper = urlInput.parentNode;
+          if (inputWrapper) inputWrapper.classList.add('error');
           // Add error tooltip
-          urlInput.title = `Error: ${response.error || 'Unable to access URL'}`;
+          // urlInput.title = `Error: ${response.error || 'Unable to access URL'}`;
         } else {
           // Only clear error state if validation passes
-          urlInput.classList.remove('error');
-          urlInput.title = '';
+          const inputWrapper = urlInput.parentNode;
+          if (inputWrapper) inputWrapper.classList.remove('error');
+          // urlInput.title = '';
         }
-        
-        // Update icon after error check is complete
-        this.updateIcon(url);
+
+        // Update icons after error check is complete
+        this.updateUrlInputIcons(url);
       });
     },
-    
-    // Initialize icon state based on stored URL
+
+    // Initialize error state for stored URL if invalid
     initIconState() {
-      const storedUrl = pxpUrls.getStoredUrl();
+      const storedUrl = pxp.urls.getStoredUrl();
       if (storedUrl && storedUrl.trim()) {
-        // Check if stored URL is valid
-        chrome.runtime.sendMessage({ action: "errorCheckURL", url: storedUrl }, (response) => {
-          if (chrome.runtime.lastError) {
-            return;
-          }
+        // Check if stored URL is valid and set error state if needed
+        chrome.runtime.sendMessage({action: "errorCheckURL", url: storedUrl}, (response) => {
+          if (chrome.runtime.lastError) return;
           
-          if (response && response.accessible) {
-            // Valid stored URL - show new window icon
-            this.showNewWindow = true;
-            this.updateIcon(storedUrl);
-          } else {
-            // Invalid stored URL - show go icon with error
-            this.showNewWindow = false;
-            this.updateIcon(storedUrl);
+          if (response && !response.accessible) {
+            // Set error state AND update icons to show error icon
+            showErrorInSettings(storedUrl, response.error || 'Unable to access URL');
+            this.updateUrlInputIcons(storedUrl);
           }
         });
-      } else {
-        // No stored URL - show go icon
-        this.showNewWindow = false;
-        this.updateIcon('');
       }
     }
   };
+
   
-  // Initialize handler with proper icon state
+  // Update lock icon visibility and input state
+  const updateUrlPathSyncState = () => {
+    const syncUrlPathEnabled = pxp.settings.getSyncUrlPath();
+    const inputWrapper = urlInput.parentNode;
+    
+    if (syncUrlPathEnabled) {
+      inputWrapper.classList.add('locked');
+      urlInput.readOnly = true;
+    } else {
+      inputWrapper.classList.remove('locked');
+      urlInput.readOnly = false;
+    }
+  };
+  
   urlInputHandler.initIconState();
-  
-  // ===== OPTIMIZED EVENT HANDLERS =====
-  
+
   // Input change handler
   urlInput.addEventListener('input', (e) => {
     const url = e.target.value.trim();
     urlInputHandler.handleInput(url);
   });
-  
+
   // Enter key handler
   urlInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -817,25 +823,29 @@ function createOverlay() {
       urlInputHandler.submitUrl(url);
     }
   });
-  
-  // Icon click handler
-  urlInputIcon.addEventListener('click', () => {
+
+  // Go icon click handler
+  urlGoIcon.addEventListener('click', () => {
     const url = urlInput.value.trim();
-    const isNewWindowIcon = urlInputIcon.classList.contains('new-window-icon');
-    const isErrorIcon = urlInputIcon.classList.contains('error-icon');
-    
-    if ((isNewWindowIcon || isErrorIcon) && pxpIframe?.src) {
-      // Open in new tab
-      const baseUrl = pxpIframe.src.split('?')[0];
-      window.open(baseUrl, '_blank');
-    } else if (!isNewWindowIcon && !isErrorIcon && url) {
-      // Trigger URL submission
-      urlInputHandler.submitUrl(url);
-    }
+    if (url) urlInputHandler.submitUrl(url);
+  });
+
+  // Error icon click handler
+  // urlErrorIcon.addEventListener('click', () => {
+  //   if (pxpIframe?.src) {
+  //     const baseUrl = pxpIframe.src.split('?')[0];
+  //     window.open(baseUrl, '_blank');
+  //   }
+  // });
+
+  // Label icon click handler (open URL in new tab)
+  urlNewWindowIcon.addEventListener('click', () => {
+    const storedUrl = pxp.urls.getStoredUrl();
+    if (storedUrl) window.open(storedUrl, '_blank');
   });
 
   // Get stored opacity value or default to 100
-  const initialValue = pxpSettings.getOpacity();
+  const initialValue = pxp.settings.getOpacity();
 
   const sliderContainer = div({id: 'opacity-slider'},
     div({id: 'slider-track'}),
@@ -848,23 +858,23 @@ function createOverlay() {
   const sliderFill = sliderContainer.querySelector('#slider-fill');
 
   // Set percentage text to match stored opacity
-  const opacityValue = pxpSettings.getOpacity().toString();
+  const opacityValue = pxp.settings.getOpacity().toString();
   const value = span({id: 'opacity-value', title: 'Current opacity value'}, opacityValue + '%');
 
   // Add invert toggle button
   const invertBtn = div({class: 'invert btn'}, 'Invert');
 
   // Restore invert state from localStorage
-  if (pxpSettings.getInverted()) {
+  if (pxp.settings.getInverted()) {
     pxpIsInverted = true;
     invertBtn.classList.add('active');
   }
 
   // Add scroll mode custom dropdown
   const options = [
-    {value: 'both', text: 'Scroll Both', selected: true},
-    {value: 'original', text: 'Scroll Page', selected: false},
-    {value: 'overlay', text: 'Scroll Overlay', selected: false}
+    {value: 'both', text: 'Scroll Both', selected: pxpScrollMode === 'both'},
+    {value: 'original', text: 'Scroll Page', selected: pxpScrollMode === 'original'},
+    {value: 'overlay', text: 'Scroll Overlay', selected: pxpScrollMode === 'overlay'}
   ];
 
   const scrollModeDropdown = div({id: 'scroll-mode-dropdown'},
@@ -879,11 +889,15 @@ function createOverlay() {
     )
   );
 
+  // Get the text for the selected scroll mode
+  const selectedOption = options.find(option => option.selected);
+  const selectedText = selectedOption ? selectedOption.text : 'Scroll Both';
+
   const scrollModeSelect = div({
       class: 'scroll-mode-select btn',
       title: 'Select scroll mode'
     },
-    span({}, 'Scroll Both'),
+    span({}, selectedText),
     scrollModeDropdown
   );
 
@@ -910,18 +924,15 @@ function createOverlay() {
 
   // Centralized function to handle overlay state changes
   const setOverlayState = (isOn) => {
-    console.log('setOverlayState: Setting overlay to', isOn ? 'ON' : 'OFF');
-    
     // Update toggle input
     toggleInput.checked = isOn;
-    
+
     // Update control classes
     updateControlsClass();
-    
+
     if (isOn) {
       // Show overlay and restore opacity
-      pxpOverlay.style.zIndex = '999999';
-      pxpOverlay.style.opacity = '1';
+      pxpOverlay.classList.remove('off');
 
       // Re-enable all controls
       sliderContainer.classList.remove('disabled');
@@ -929,24 +940,28 @@ function createOverlay() {
       urlInput.disabled = false;
       scrollModeSelect.disabled = false;
 
-      // Restore last opacity
-      sliderThumb.style.left = ppLastOpacityValue + '%';
-      sliderFill.style.width = ppLastOpacityValue + '%';
-      const opacity = ppLastOpacityValue / 100;
+      // Restore last opacity (default to 100% for first time)
+      const targetOpacity = ppLastOpacityValue || 100;
+      sliderThumb.style.left = targetOpacity + '%';
+      sliderFill.style.width = targetOpacity + '%';
+      const opacity = targetOpacity / 100;
       pxpIframe.style.opacity = opacity;
-      value.textContent = ppLastOpacityValue + '%';
+      value.textContent = targetOpacity + '%';
+
+      // Update the global variable to ensure consistency
+      ppLastOpacityValue = targetOpacity;
 
       // Check server status when turning ON
       if (pxpIframe && pxpIframe.src) {
         const baseUrl = pxpIframe.src.split('?')[0];
-        chrome.runtime.sendMessage({ action: "errorCheckURL", url: baseUrl }, (response) => {
+        chrome.runtime.sendMessage({action: "errorCheckURL", url: baseUrl}, (response) => {
           if (chrome.runtime.lastError) return;
-          
+
           if (response && !response.accessible) {
-            pxpIframe.style.display = 'none';
+            pxpIframe.classList.add('off');
             showErrorInSettings(baseUrl, response.error);
           } else {
-            pxpIframe.style.display = '';
+            pxpIframe.classList.remove('off');
             clearSettingsError();
           }
         });
@@ -956,11 +971,10 @@ function createOverlay() {
       const currentLeft = parseFloat(sliderThumb.style.left) || 0;
       ppLastOpacityValue = Math.round(currentLeft);
 
-      // Hide overlay but keep controls visible and accessible
-      pxpOverlay.style.zIndex = '-999999';
-      pxpOverlay.style.opacity = '0';
+      // Hide overlay
+      pxpOverlay.classList.add('off');
 
-      // Disable slider functionality but keep other controls enabled
+      // todo: move to CSS - Disable slider functionality but keep other controls enabled
       sliderContainer.classList.add('disabled');
       sliderContainer.style.pointerEvents = 'none';
       urlInput.disabled = false;
@@ -969,20 +983,17 @@ function createOverlay() {
       // Move slider to 0 and set 50% opacity for OFF state
       sliderThumb.style.left = '0%';
       sliderFill.style.width = '0%';
-      pxpIframe.style.opacity = '0.5';
+      // TESTING pxpIframe.style.opacity = '0.5';
       value.textContent = 'OFF';
 
       // Hide error message if it exists
       const errorOverlay = document.getElementById('pxp-error-message');
       if (errorOverlay) errorOverlay.remove();
     }
-    
-    // Save state to localStorage
-    pxpSettings.setOverlayState(isOn);
-  };
 
-  // Set initial state to OFF
-  setOverlayState(false);
+    // Save state to localStorage
+    pxp.settings.setOverlayState(isOn);
+  };
 
   // Add toggle event handler
   toggleInput.addEventListener('change', function () {
@@ -990,12 +1001,20 @@ function createOverlay() {
     setOverlayState(toggleInput.checked);
   });
 
-  // Add settings button (burger icon)
+
+  // Settings burger icon
   const settingsBtn = div({class: 'settings-burger', title: 'Settings'});
   settingsBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  settingsBtn.addEventListener('click', function () {
+    const isVisible = settingsMenu.style.display !== 'none';
+    settingsMenu.style.display = isVisible ? 'none' : 'block';
+  });
 
   // Add close button
   const closeBtn = div({id: 'close-btn', title: 'Close overlay'}, '×');
+  closeBtn.addEventListener('click', function () {
+    toggleOverlay();
+  });
 
   // Add open overlay button
   const openOverlay = div({
@@ -1110,7 +1129,7 @@ function createOverlay() {
     pxpIframe.style.opacity = opacity;
     value.textContent = Math.round(percentage) + '%';
     ppLastOpacityValue = Math.round(percentage);
-    pxpSettings.setOpacity(Math.round(percentage));
+    pxp.settings.setOpacity(Math.round(percentage));
   }
 
   // Toggle event handler is now set up above with setOverlayState function
@@ -1129,7 +1148,7 @@ function createOverlay() {
     }
 
     // Save invert setting to localStorage
-    pxpSettings.setInverted(pxpIsInverted);
+    pxp.settings.setInverted(pxpIsInverted);
   });
 
   // Add scroll mode custom dropdown functionality
@@ -1157,7 +1176,7 @@ function createOverlay() {
 
       const newMode = dropdownOption.dataset.value;
       pxpScrollMode = newMode;
-      pxpSettings.setScrollMode(newMode);
+      pxp.settings.setScrollMode(newMode);
 
       // Update button text
       const buttonText = scrollModeSelect.querySelector('span');
@@ -1213,12 +1232,17 @@ function createOverlay() {
   });
 
   // Add URL input setting (first option)
-  const urlOption = div({class: 'settings-option'},
-    span({class: 'settings-text'}, 'Overlay URL'),
+  const urlOption = div({class: 'settings-option url-option'},
+    div({class: 'url-label'}, 
+      'Overlay URL',
+      urlNewWindowIcon
+    ),
     div({class: 'url-input-container'},
       div({class: 'input-wrapper'},
         urlInput,
-        urlInputIcon
+        urlGoIcon,
+        urlErrorIcon,
+        urlLockIcon
       )
     )
   );
@@ -1232,51 +1256,110 @@ function createOverlay() {
     )
   );
 
-  
-
 
   // dark theme setting
+  const darkThemeToggle = input({type: 'checkbox', id: 'dark-theme-toggle', checked: pxp.settings.getDarkTheme()});
   const darkThemeOption = div({class: 'settings-option'},
     span({class: 'settings-text'}, 'Dark theme'),
     label({class: 'switch'},
-      input({type: 'checkbox', id: 'dark-theme-toggle', checked: true}),
+      darkThemeToggle,
       span({class: 'slider round'})
     )
   );
 
+  // Dark theme toggle event listener
+  darkThemeToggle.addEventListener('change', function() {
+    const isDark = this.checked;
+    pxp.settings.setDarkTheme(isDark);
 
-  // Set default dark theme state
-  const darkThemeToggle = darkThemeOption.querySelector('#dark-theme-toggle');
-  darkThemeToggle.checked = pxpSettings.getDarkTheme();
+    // Apply theme to controls
+    if (isDark) {
+      pxpControls.classList.add('dark-theme');
+      pxpControls.classList.remove('light-theme');
+    } else {
+      pxpControls.classList.add('light-theme');
+      pxpControls.classList.remove('dark-theme');
+    }
+  });
 
   // Sync URL path setting
+  const syncUrlPathToggle = input({type: 'checkbox', id: 'sync-url-path-toggle', checked: pxp.settings.getSyncUrlPath()});
   const syncUrlPathOption = div({class: 'settings-option'},
     span({class: 'settings-text'}, 'Sync URL path'),
     label({class: 'switch'},
-      input({type: 'checkbox', id: 'sync-url-path-toggle'}),
+      syncUrlPathToggle,
       span({class: 'slider round'})
     )
   );
 
+  // Sync URL path toggle event listener
+  syncUrlPathToggle.addEventListener('change', function() {
+    const isSyncEnabled = this.checked;
+    pxp.settings.setSyncUrlPath(isSyncEnabled);
+    updateUrlPathSyncState();
 
-  // Set default sync URL path state
-  const syncUrlPathToggle = syncUrlPathOption.querySelector('#sync-url-path-toggle');
-  syncUrlPathToggle.checked = pxpSettings.getSyncUrlPath();
+    if (isSyncEnabled) {
+      // Check if current overlay URL path matches the page URL path
+      const currentPageUrl = window.location.href;
+      const currentPagePath = new URL(currentPageUrl).pathname;
+
+      const storedOverlayUrl = pxp.urls.getStoredUrl();
+      let overlayUrlPath;
+
+      try {
+        const overlayUrlObj = new URL(storedOverlayUrl);
+        overlayUrlPath = overlayUrlObj.pathname;
+      } catch (e) {
+        // If stored URL is not valid, default to root path
+        overlayUrlPath = '/';
+      }
+
+      // Compare paths (normalize by removing trailing slash)
+      const normalizedPagePath = currentPagePath.replace(/\/$/, '') || '/';
+      const normalizedOverlayPath = overlayUrlPath.replace(/\/$/, '') || '/';
+
+      if (normalizedPagePath !== normalizedOverlayPath) {
+        // Update the URL input field to show the synced path
+        const newOverlayUrl = pxp.urls.getUrlWithPathSync();
+        const urlInput = document.getElementById('url-input');
+        if (urlInput) {
+          urlInput.value = newOverlayUrl;
+          pxp.urls.setStoredUrl(newOverlayUrl);
+        }
+
+        // Update the iframe URL to match the current page path
+        // Reload the iframe
+        pxpIframe.remove();
+        pxpIframe = loadOverlayIframe();
+        pxpOverlay.appendChild(pxpIframe);
+      }
+    } else {
+      // Sync is enabled but paths already match - still need to check if stored URL needs updating
+      const currentStoredUrl = pxp.urls.getStoredUrl();
+      const syncedUrl = pxp.urls.getUrlWithPathSync();
+      if (syncedUrl !== currentStoredUrl) {
+        pxp.urls.setStoredUrl(syncedUrl);
+        console.log('Updated stored URL to match synced URL:', syncedUrl);
+        
+        const urlInput = document.getElementById('url-input');
+        if (urlInput) {
+          urlInput.value = syncedUrl;
+        }
+      }
+    }
+  });
 
 
   settingsMenu.append(urlOption, syncUrlPathOption, dockOption, darkThemeOption);
   pxpControls.appendChild(settingsMenu);
+  
+  // Initialize lock state and icon state after DOM is created
+  updateUrlPathSyncState();
+  urlInputHandler.initIconState();
 
   // Check if this is the first time user and show instructions
   const isFirstTime = !localStorage.getItem('pxpActive');
   if (isFirstTime) showInstructions();
-  
-
-  // Settings button click handler
-  settingsBtn.addEventListener('click', function () {
-    const isVisible = settingsMenu.style.display !== 'none';
-    settingsMenu.style.display = isVisible ? 'none' : 'block';
-  });
 
   // Close settings menu when clicking outside
   document.addEventListener('click', function (e) {
@@ -1299,7 +1382,7 @@ function createOverlay() {
     else if (position === 'bottom') pxpControls.classList.add('bottom');
 
     // Save dock position to localStorage
-    pxpSettings.setDockPosition(position);
+    pxp.settings.setDockPosition(position);
   }
 
   // Add dock button event listeners
@@ -1313,92 +1396,9 @@ function createOverlay() {
     }
   });
 
-  // Add dark theme toggle event listener
-  document.addEventListener('change', function (e) {
-    if (e.target.id === 'dark-theme-toggle') {
-      const isDark = e.target.checked;
-      pxpSettings.setDarkTheme(isDark);
-
-      // Apply theme to controls
-      if (isDark) {
-        pxpControls.classList.add('dark-theme');
-        pxpControls.classList.remove('light-theme');
-      } else {
-        pxpControls.classList.add('light-theme');
-        pxpControls.classList.remove('dark-theme');
-      }
-    } else if (e.target.id === 'sync-url-path-toggle') {
-      const isSyncEnabled = e.target.checked;
-      pxpSettings.setSyncUrlPath(isSyncEnabled);
-
-      if (isSyncEnabled) {
-        // Check if current overlay URL path matches the page URL path
-        const currentPageUrl = window.location.href;
-        const currentPagePath = new URL(currentPageUrl).pathname;
-
-        const storedOverlayUrl = pxpUrls.getStoredUrl();
-        let overlayUrlPath;
-
-        try {
-          const overlayUrlObj = new URL(storedOverlayUrl);
-          overlayUrlPath = overlayUrlObj.pathname;
-        } catch (e) {
-          // If stored URL is not valid, default to root path
-          overlayUrlPath = '/';
-        }
-
-        // Compare paths (normalize by removing trailing slash)
-        const normalizedPagePath = currentPagePath.replace(/\/$/, '') || '/';
-        const normalizedOverlayPath = overlayUrlPath.replace(/\/$/, '') || '/';
-
-        if (normalizedPagePath !== normalizedOverlayPath) {
-          // Update the URL input field to show the synced path
-          const newOverlayUrl = pxpUrls.getUrlWithPathSync();
-          const urlInput = document.getElementById('url-input');
-          if (urlInput) {
-            urlInput.value = newOverlayUrl;
-            pxpUrls.setStoredUrl(newOverlayUrl);
-          }
-          
-          // Update the iframe URL to match the current page path
-          // Reload the iframe
-          pxpIframe.remove();
-          pxpIframe = loadOverlayIframe();
-          pxpOverlay.appendChild(pxpIframe);
-        }
-      }
-    }
-  });
-
-  // Restore dock position from localStorage or default to top
-  const savedDockPosition = pxpSettings.getDockPosition();
-  dockControls(savedDockPosition);
-
-  // Apply initial theme
-  if (pxpSettings.getDarkTheme()) {
-    pxpControls.classList.add('dark-theme');
-    pxpControls.classList.remove('light-theme');
-  } else {
-    pxpControls.classList.add('light-theme');
-    pxpControls.classList.remove('dark-theme');
-  }
-
-
-  closeBtn.addEventListener('click', function () {
-    // Use the toggle function to ensure proper state management
-    toggleOverlay();
-  });
-
-
-  // Add event listeners for scroll and arrow key handling
-  document.addEventListener('wheel', globalWheelHandler, {passive: false});
-  document.addEventListener('keydown', arrowKeyHandler);
-
-  // Add scroll event listener for smoother sync in "both" mode
-  window.addEventListener('scroll', throttle(syncIframeScroll, 10), {passive: true});
 
   pxpControls.append(
-    ppIcon, 
+    ppIcon,
     onOffToggle,
     sliderContainer,
     value,
@@ -1410,21 +1410,28 @@ function createOverlay() {
 
   pxpOverlay.appendChild(pxpIframe);
 
-  // Check if there's a valid stored URL and overlay should be ON
-  const storedUrl = pxpUrls.getStoredUrl();
-  const hasValidUrl = storedUrl && storedUrl.trim();
-  const shouldShowOverlay = hasValidUrl && pxpSettings.getOverlayState();
+  // Restore dock position
+  const savedDockPosition = pxp.settings.getDockPosition();
+  dockControls(savedDockPosition);
 
-  console.log('createOverlay: Initial setup - hasValidUrl:', hasValidUrl, 'shouldShowOverlay:', shouldShowOverlay);
-
-  // Apply the appropriate initial state
-  if (shouldShowOverlay) {
-    setOverlayState(true);
+  // Apply initial theme
+  if (pxp.settings.getDarkTheme()) {
+    pxpControls.classList.add('dark-theme');
+    pxpControls.classList.remove('light-theme');
+  } else {
+    pxpControls.classList.add('light-theme');
+    pxpControls.classList.remove('dark-theme');
   }
-  // If no valid URL or overlay should be off, it's already set to OFF above
 
-  // Add both overlay and controls as siblings to body
-  document.body.appendChild(pxpOverlay);
-  document.body.appendChild(pxpControls);
+  const storedUrl = pxp.urls.getStoredUrl();
+  const hasValidUrl = storedUrl && storedUrl.trim();
+  const storedOverlayState = pxp.settings.getOverlayState();
+  const shouldShowOverlay = hasValidUrl && storedOverlayState;
+  setOverlayState(shouldShowOverlay);
 
+  document.addEventListener('wheel', globalWheelHandler, {passive: false});
+  document.addEventListener('keydown', arrowKeyHandler);
+  window.addEventListener('scroll', throttle(syncIframeScroll, 10), {passive: true});
+
+  document.body.append(pxpOverlay, pxpControls);
 }

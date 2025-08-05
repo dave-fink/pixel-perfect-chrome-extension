@@ -10,6 +10,7 @@
   &.dark-theme {
     --background: rgba(69, 69, 69, 0.9);
     --dark-background: rgba(0, 0, 0, 0.2);
+    --menu-background: #444;
     --light-background: #999;
     --text-color: #e0e0e0;
     --border-color: #555555;
@@ -18,6 +19,7 @@
   &.light-theme {
     --background: rgba(245, 245, 245, 0.95);
     --dark-background: rgba(0, 0, 0, 0.1);
+    --menu-background: #f6f6f6;
     --light-background: #8e8e8e;
     --text-color: #333333;
     --border-color: #d0d0d0;
@@ -56,8 +58,8 @@
     left: 0;
     transform: none;
 
-    &.top { top: 0; }
-    &.bottom { bottom: 0; }
+    &.top { top: 0 }
+    &.bottom { bottom: 0 }
   }
   
   * {
@@ -189,17 +191,11 @@
       width: 0;
       height: 0;
 
-      &:checked + .slider {
-        background-color: var(--blue);
-      }
+      &:checked + .slider { background-color: var(--blue) }
       
-      &:focus + .slider {
-        box-shadow: 0 0 1px var(--blue);
-      }
+      &:focus + .slider { box-shadow: 0 0 1px var(--blue) }
       
-      &:checked + .slider:before {
-        transform: translateX(20px);
-      }
+      &:checked + .slider:before { transform: translateX(20px) }
     }
     
     .slider {
@@ -322,7 +318,7 @@
   #settings-menu {
     position: absolute;
     right: 0;
-    background: rgba(69, 69, 69, 1);
+    background: var(--menu-background);
     border-radius: var(--border-radius);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     min-width: 380px;
@@ -361,8 +357,6 @@
         display: flex;
         align-items: center;
         height: 100%;
-
-        /* .error & { color: #ff4444 } */
       }
       
       .settings-toggle {
@@ -387,9 +381,7 @@
         cursor: pointer;
         transition: all 0.2s ease;
         
-        &:hover {
-          border-color: var(--blue);
-        }
+        &:hover { border-color: var(--blue) }
 
         /* Active states */
         .top &[data-position="top"],
@@ -400,18 +392,63 @@
         }
       }
       
+      &.url-option {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        
+        .url-label {
+          font-size: 12px;
+          font-weight: 500;
+          color: var(--text-color);
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .url-new-window-icon {
+          cursor: pointer;
+          opacity: 0.8;
+          width: 16px;
+          height: 16px;
+          transition: opacity 0.2s ease;
+          display: none;
+          
+          &.active { display: inline-block }
+          
+          &:hover { opacity: 1 }
+          
+          svg {
+            width: 14px;
+            height: 14px;
+            fill: var(--text-color);
+          }
+        }
+      }
+      
       .url-input-container {
         position: relative;
         display: flex;
         flex-direction: column;
         width: 100%;
-        margin-left: 16px;
         
         .input-wrapper {
           position: relative;
           display: flex;
           align-items: center;
           width: 100%;
+
+          /* icon visibility */
+          &.locked #url-lock-icon,
+          &.changed #url-go-icon,
+          &.error #url-error-icon,
+          &.locked.changed #url-go-icon {
+            display: block;
+          }
+
+          /* Hide go icon when locked (unless URL changed) */
+          &.locked #url-go-icon { display: none }
         }
         
         #url-input {
@@ -419,16 +456,18 @@
           width: 100%;
           height: auto;
           padding: 8px 30px 8px 10px;
+          .locked & { padding-left: 24px } /* lock icon shown */
           background: var(--dark-background);
           border: 1px solid var(--border-color);
           border-radius: 4px;
-          font-size: 11px;
+          font-size: 12px;
           line-height: 11px;
           color: var(--text-color);
 
           &::placeholder {
-            font-size: 13px;
-            color: var(--text-color);
+            color: #999;
+            opacity: 0.7;
+            font-size: 12px;
           }
 
           /* focus when there's no placeholder */
@@ -441,23 +480,16 @@
             outline: none;
             border-color: var(--blue);
           }
-          
-          &::placeholder {
-            color: #999;
-            opacity: 0.7;
-          }
-          
-          &:disabled {
-            color: #666;
-            border-color: #444;
+
+          /* sync url path on */
+          .locked & {
             cursor: not-allowed;
+            border-color: var(--border-color);
           }
+
+          .error & { border: 1px solid var(--red) !important}
         }
         
-        #url-input.error {
-          /* color: var(--red) !important; */
-          border: 1px solid var(--red);
-        }
 
         .url-error-message {
           position: absolute;
@@ -469,7 +501,8 @@
           font-size: 11px;
         }
         
-        #url-input-icon {
+        #url-go-icon,
+        #url-error-icon {
           background: transparent;
           width: 20px;
           height: 20px;
@@ -480,29 +513,44 @@
           z-index: 999;
           cursor: pointer;
           fill: var(--text-color);
-
-          /* Icon states */
-          svg { opacity: .8; transition: opacity 0.2s ease-in-out; }
-          &:hover svg{ opacity: 1; }
-
-          &.go-icon {
-            svg { 
-              opacity: 0.6; 
-              transition: opacity 0.2s ease-in-out;
-            }
-            
-            &.error svg { opacity: 1; }
-            &.valid svg { opacity: 1; }
-            &:hover svg { opacity: 1; }
+          display: none;
+          
+          svg { 
+            opacity: 0.6; 
+            transition: opacity 0.2s ease-in-out;
           }
+          
+          &:hover svg { opacity: 1 }
+        }
+        
+        #url-go-icon {
+          color: #4a9eff;
+          
+          svg { opacity: 1 }
+        }
+        
+        #url-error-icon {
+          color: var(--red);
+          
+          svg { opacity: 1 }
+        }
+        
+        #url-lock-icon {
+          background: transparent;
+          width: 16px;
+          height: 16px;
+          position: absolute;
+          top: 50%;
+          left: 6px;
+          transform: translateY(-50%);
+          z-index: 998;
+          cursor: default;
+          fill: var(--text-color);
+          display: none;
 
-          &.error-icon {
-            svg { opacity: 1; }
-          }
-
-          &.new-window-icon {
-            svg { opacity: .8; }
-            &:hover svg { opacity: 1; }
+          svg { 
+            opacity: 0.6; 
+            transition: opacity 0.2s ease-in-out;
           }
         }
       }
@@ -525,9 +573,7 @@
     cursor: pointer;
     transition: color 0.2s ease;
 
-    &:hover {
-      opacity: .8;
-    }
+    &:hover { opacity: .8 }
     @media (width < 830px) {
       border-radius: 0;
     }
@@ -537,8 +583,7 @@
 
 #pxp-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100vh;
   z-index: 999999;
@@ -557,9 +602,23 @@
     will-change: transform;
   }
 
+  &.error {
+    background: rgba(77, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    
+    iframe {
+      
+    }
+  }
 
+  &.off {
+    z-index: -999999;
+    opacity: 0;
+  }
 
-  &.instructions {
+  &.off.instructions {
+    z-index: 999999;
+    opacity: 1;
     background: rgba(0, 0, 0, 0.8);
     filter: grayscale(100%);
     backdrop-filter: blur(20px);
@@ -607,7 +666,7 @@
     z-index: 1;
   }
   
-  .pxp-message {
+  .pxp-description {
     font-size: 15px;
     line-height: 1.6;
     text-align: left;
@@ -634,7 +693,7 @@
       margin-bottom: 16px;
       font-size: 16px;
       line-height: 1.6;
-      padding: 12px 16px 12px 32px;
+      padding: 12px 16px 12px 54px;
       background: rgba(0, 117, 255, 0.05);
       border-radius: 8px;
       position: relative;
@@ -647,13 +706,13 @@
       &::before {
         content: counter(list-item);
         position: absolute;
-        left: -8px;
+        left: 10px;
         top: 50%;
         transform: translateY(-50%);
         background: #0075ff;
         color: white;
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -683,9 +742,7 @@
     z-index: 1;
     transition: all 200ms ease;
   
-    &:hover {
-      box-shadow: 0 0px 20px rgba(0, 117, 255, 0.4);
-    }
+    &:hover { box-shadow: 0 0px 20px rgba(0, 117, 255, 0.4) }
   }
 
   .pxp-more-info {
