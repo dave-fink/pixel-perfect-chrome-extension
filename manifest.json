@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pixel Perfect Overlay",
-  "version": "1.1",
+  "version": "1.0",
   "description": "Simultaneously overlay a local development page on top of any live site for precise, pixel-perfect comparison. Forget toggling tabs!",
   "permissions": [
     "activeTab",

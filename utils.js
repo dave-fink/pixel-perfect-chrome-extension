@@ -144,13 +144,17 @@ const pxp = {
           currentVersion
         }));
         
-        console.log('Version check:', { currentVersion, latestVersion });
-        
         const isNewer = this.compareVersions(latestVersion, currentVersion) > 0;
+        
+        // Console message for developers when new version is available
+        if (isNewer) {
+          console.log(`🚀 Pixel Perfect Extension: New version ${latestVersion} available! Download: https://github.com/dave-fink/pixel-perfect-chrome-extension`);
+        }
+        
         callback(isNewer ? latestVersion : null);
         
       } catch (error) {
-        console.log('Version check failed:', error.message);
+    
         callback(null); // Return null on error
       }
     },
