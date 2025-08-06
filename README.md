@@ -29,6 +29,15 @@ A Chrome extension that overlays a development URL (e.g. localhost:3000) directl
 5. The extension should now appear in your extensions list
 6. Pin it to your toolbar and click the icon to activate it on any web page
 
+
+## ⚠️ Known Issues
+
+> **Important:** Please be aware of these current limitations before using the extension.
+
+- **🔧 Viewport height *vh* measurement challenges** - CSS vh units may behave differently between the main page and overlay iframe, causing slight height mismatches due to iframe height. Working on a fix.
+
+*If you encounter an issue - please open a ticket so I can investigate.*
+
 ## Features
 
 - **Full-screen overlay** - Overlays a wep page on top of the current URL
@@ -51,10 +60,5 @@ A Chrome extension that overlays a development URL (e.g. localhost:3000) directl
 - **Positionable** - Control bar can be positioned at top or bottom of screen
 - **Tab indicators** - Browser tab shows "(px)" prefix and extension favicon when overlay is active
 
-## Known Issues
 
-- **Viewport height (vh) challenges** - CSS vh units may behave differently between the main page and overlay iframe, causing slight height mismatches due to iframe height.  Working on a fix.
-- **Cross-origin iframe limitations** - Some websites may have restrictions that limit overlay functionality
-
-
-*⚠️ Disclaimer: This extension is under active development and may not be fully stable. While every effort has been made to ensure reliability, unexpected behavior may occur. If you find a bug, please open a GitHub issue with as much detail as possible. [create a GitHub issue](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues).  Thank you*
+*Note: This extension is under active development and may not be fully stable. While every effort has been made to ensure reliability, unexpected behavior may occur. If you find a bug, please open a GitHub issue with as much detail as possible. [create a GitHub issue](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues).  Thank you*
