@@ -1,6 +1,7 @@
 # Pixel Perfect Overlay Chrome Extension
 
-<img width="857" height="95" alt="image" src="https://github.com/user-attachments/assets/da84710f-40d7-4624-b0b8-9044ffef8c3a" />
+<img width="623" height="90" alt="image" src="https://github.com/user-attachments/assets/87445ecc-5b6b-45ed-bc28-4db61462a248" />
+
 
 A Chrome extension that overlays a development URL (e.g. localhost:3000) directly on top of any webpage for pixel-perfect comparison and design verification. Work in real time without the hassle of switching tabs.
 
