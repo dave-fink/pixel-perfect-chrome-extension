@@ -3,19 +3,17 @@
 <img width="623" height="90" alt="image" src="https://github.com/user-attachments/assets/87445ecc-5b6b-45ed-bc28-4db61462a248" />
 
 
-A Chrome extension that overlays a development URL (e.g. localhost:3000) directly on top of any webpage for pixel-perfect comparison and design verification. Work in real time without the hassle of switching tabs.
+A Chrome extension that overlays a locoal development URL directly on top of any webpage for pixel-perfect comparison and design verification. Work in real time without the hassle of switching tabs.
 
 
 **Adjust opacity and invert Colors to easily see alignment issues:**
 
-<img title="BEFORE" width="282" height="282" alt="image" src="https://github.com/user-attachments/assets/03fd8c7c-9c64-440f-a3d7-7c352bed2e2a" />
+<img title="BEFORE" width="182" height="182" alt="image" src="https://github.com/user-attachments/assets/03fd8c7c-9c64-440f-a3d7-7c352bed2e2a" />
 
-<img title="AFTER" width="282" height="283" alt="image" src="https://github.com/user-attachments/assets/469d1d10-4a47-451d-9543-4af2352925b5" />
+<img title="AFTER" width="182" height="183" alt="image" src="https://github.com/user-attachments/assets/469d1d10-4a47-451d-9543-4af2352925b5" />
 
-
-
-
-
+<br>
+<br>
 
 
 
@@ -27,16 +25,21 @@ A Chrome extension that overlays a development URL (e.g. localhost:3000) directl
 3. Enable "Developer mode" in the top right corner
 4. Click "Load unpacked" and select the directory containing the extension files
 5. The extension should now appear in your extensions list
-6. Pin it to your toolbar and click the icon to activate it on any web page
+6. Pin it to your toolbar and click the '(px)' icon to activate it on any web page
 
 
-## ⚠️ Known Issues
+<br>
+<br>
 
-> **Important:** Please be aware of these current limitations before using the extension.
+## ⚠️ Important - Known Issues
 
-- **🔧 Viewport height *vh* measurement challenges** - CSS vh units may behave differently between the main page and overlay iframe, causing slight height mismatches due to iframe height. Working on a fix.
+> **Viewport height *vh* measurement challenges** - CSS vh units behave differently between the main page and overlay iframe, causing height mismatches due to how the iframe height.  There are challenges with this, but working on a fix.
 
-*If you encounter an issue - please open a ticket so I can investigate.*
+**If you encounter any problem - please [create a GitHub issue](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues).**
+
+
+<br>
+<br>
 
 ## Features
 
