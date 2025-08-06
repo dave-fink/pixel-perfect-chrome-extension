@@ -6,11 +6,40 @@ chrome.runtime.onStartup.addListener(async () => {
 chrome.runtime.onInstalled.addListener(async () => {
   await updateToolbarIcon(false);
   
+  // Get version from manifest
+  const manifest = chrome.runtime.getManifest();
+  const version = manifest.version;
+  
   // Create context menu
   chrome.contextMenus.create({
     id: "showInstructions",
     title: "Show Instructions",
     contexts: ["action"]
+  });
+  
+  chrome.contextMenus.create({
+    id: "viewReadme",
+    title: "View readme",
+    contexts: ["action"]
+  });
+  
+  chrome.contextMenus.create({
+    id: "logIssue",
+    title: "Log an issue",
+    contexts: ["action"]
+  });
+  
+  chrome.contextMenus.create({
+    id: "checkUpdates",
+    title: "Check for updates",
+    contexts: ["action"]
+  });
+  
+  chrome.contextMenus.create({
+    id: "version",
+    title: `Version ${version}`,
+    contexts: ["action"],
+    enabled: false // Make it non-clickable, just informational
   });
 });
 
@@ -60,15 +89,14 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         func: () => {
           return {
             url: localStorage.getItem('pxpUrl'),
-            active: localStorage.getItem('pxpActive')
+            active: localStorage.getItem('pxpActive') === 'true'
           };
         }
       });
       
       const data = results[0]?.result;
       
-      if (data?.active === 'true') {
-        
+      if (data?.active === true) {       
         // Inject CSS and content scripts
         await chrome.scripting.insertCSS({
           target: { tabId: tabId },
@@ -120,6 +148,48 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     } catch (error) {
       console.error('Error showing instructions:', error);
     }
+  } else if (info.menuItemId === "viewReadme") {
+    // Open readme in new tab
+    chrome.tabs.create({
+      url: "https://github.com/dave-fink/pixel-perfect-chrome-extension/blob/main/README.md"
+    });
+  } else if (info.menuItemId === "logIssue") {
+    // Open issues page in new tab
+    chrome.tabs.create({
+      url: "https://github.com/dave-fink/pixel-perfect-chrome-extension/issues"
+    });
+  } else if (info.menuItemId === "checkUpdates") {
+    // Check for updates using utils.js function
+    try {
+      // Inject utils.js to access pxp.updates.checkForUpdates
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['utils.js']
+      });
+      
+      // Execute the update check
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          pxp.updates.checkForUpdates((latestVersion) => {
+            if (latestVersion) {
+              // Show notification - could open releases page directly
+              chrome.runtime.sendMessage({
+                action: 'updateAvailable',
+                version: latestVersion
+              });
+            } else {
+              // Show "up to date" message
+              chrome.runtime.sendMessage({
+                action: 'upToDate'
+              });
+            }
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+    }
   }
 });
 
@@ -143,6 +213,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         type: 'network_error'
       });
     });
+    return true;
+  }
+  
+  if (request.action === "updateAvailable") {
+    // Open releases page when update is available
+    chrome.tabs.create({
+      url: "https://github.com/dave-fink/pixel-perfect-chrome-extension/releases"
+    });
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  if (request.action === "upToDate") {
+    // Show notification that extension is up to date
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/pixel-perfect.png',
+      title: 'Pixel Perfect',
+      message: 'Extension is up to date!'
+    });
+    sendResponse({ success: true });
     return true;
   }
 });

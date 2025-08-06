@@ -8,7 +8,7 @@ function showErrorInSettings(url, errorDetails = '') {
   // Open settings menu to show error
   const settingsMenu = document.getElementById('settings-menu');
   if (settingsMenu) {
-    settingsMenu.style.display = 'block';
+    settingsMenu.classList.add('active');
   }
 
   // Add error class to overlay if it exists
@@ -82,7 +82,7 @@ let pxpControls = null;
 let pxpIframe = null;
 let pxpIsInverted = false;
 let pxpLastOpacityValue = 100;
-let pxpScrollMode = pxp.settings.getScrollMode();
+let pxpScrollMode = 'both'; // Will be initialized from storage in createOverlay()
 let pxpIsActive = false;
 let originalFavicon = null;
 
@@ -339,7 +339,7 @@ function showInstructions() {
   if (existingInstructions) existingInstructions.remove();
 
   // Check if this is first-time user
-  const isFirstTimeForInstructions = localStorage.getItem('pxpActive') === null;
+  const isFirstTimeForInstructions = pxp.settings.isFirstTime();
 
   // Create and show instructions overlay
   const instructionsOverlay = div({id: 'pxp-instructions-overlay'});
@@ -353,11 +353,11 @@ function showInstructions() {
       'Pixel Perfect Overlay'
     ),
     div({class: 'pxp-description'},
-      'Overlay your local dev page on any live page to quickly identify layout differences and adjust with precision.'
+      'Overlay your local development page over any live page to quickly identify layout differences and adjust with precision.'
     ),
     div({class: 'pxp-steps'},
       ol({},
-        li('Enter your dev URL ', b('Overlay URL')),
+        li('Enter your development ', b('Overlay URL')),
         li('Play with the ', b('opacity'), ' and ', b('invert'), ' colors'),
         li(b('Align'), ' elements ', b('instantly'), ' as you develop'),
         li(b('Toggle on/off'), ' to compare - ', b('no more tab switching!')),
@@ -377,7 +377,7 @@ function showInstructions() {
     // For first-time users, show settings menu and ensure extension is OFF
     if (isFirstTimeForInstructions) {
       const settingsMenuElement = document.getElementById('settings-menu');
-      if (settingsMenuElement) settingsMenuElement.style.display = 'block';
+      if (settingsMenuElement) settingsMenuElement.classList.add('active');
     }
   });
 }
@@ -391,10 +391,13 @@ function autoRestoreOverlay() {
   // This ensures the extension works when localStorage is cleared
   const shouldBeActive = isActive;
 
+
+
   if (shouldBeActive) {
     // Longer delay to ensure page is fully loaded and extension is ready
     setTimeout(() => {
       if (!pxpOverlay) {
+
         createOverlay();
         pxpIsActive = true;
         // Store active state
@@ -448,7 +451,7 @@ function toggleOverlay() {
     pxpIframe = null;
     pxpOverlay = null;
     pxpIsInverted = false;
-    ppLastOpacityValue = 100;
+    pxpLastOpacityValue = 100;
     pxpIsActive = false;
 
     // Remove event listeners
@@ -469,8 +472,7 @@ function toggleOverlay() {
     // Restore original favicon
     updateBrowserTab(false);
   } else {
-    // First Load - set overlay to OFF
-    pxp.settings.setOverlayState(false);
+    // Create overlay and restore previous state
     createOverlay();
     pxpIsActive = true;
     // Store active state
@@ -495,7 +497,7 @@ function loadOverlayIframe() {
   const initialHeight = getPageHeight();
   pxpIframe = domEl('iframe', {
     src: overlayURL,
-    style: 'height: ' + initialHeight + 'px; display: none;',
+    style: 'height: ' + initialHeight + 'px;',
     sandbox: IFRAME_SANDBOX,
     'data-cache-buster': Date.now().toString()
   });
@@ -509,24 +511,7 @@ function loadOverlayIframe() {
 
   // Add iframe error event to catch loading failures
   pxpIframe.addEventListener('error', () => {
-    pxpIframe.style.display = 'none';
     showErrorInSettings(pxpIframe.src.split('?')[0], 'Failed to load overlay URL');
-  });
-
-  // TODO: IS THIS NECESSRY NOW THAT WE HAVE IT ON THE INPUT? Error check using background script
-  chrome.runtime.sendMessage({action: "errorCheckURL", url: overlayURL.split('?')[0]}, (response) => {
-    if (chrome.runtime.lastError) {
-      return;
-    }
-    if (response && !response.accessible) {
-      // Server is down - hide iframe and show error message
-      pxpIframe.style.display = 'none';
-      showErrorInSettings(overlayURL.split('?')[0], response.error);
-    } else {
-      // Server is up - show iframe and clear any existing error message
-      pxpIframe.style.display = '';
-      clearSettingsError();
-    }
   });
 
   // Apply invert filter if previously saved
@@ -541,7 +526,7 @@ function loadOverlayIframe() {
   if (iframeOpacity !== 100) {
     const opacity = iframeOpacity / 100;
     pxpIframe.style.opacity = opacity;
-    ppLastOpacityValue = iframeOpacity;
+    pxpLastOpacityValue = iframeOpacity;
   }
 
   return pxpIframe;
@@ -549,22 +534,22 @@ function loadOverlayIframe() {
 
 function createOverlay() {
   // Restore stored state values
-  ppLastOpacityValue = pxp.settings.getOpacity();
+  pxpLastOpacityValue = pxp.settings.getOpacity();
   pxpIsInverted = pxp.settings.getInverted();
   pxpScrollMode = pxp.settings.getScrollMode();
 
-  console.log('createOverlay: Restored state - opacity:', ppLastOpacityValue, 'inverted:', pxpIsInverted, 'scrollMode:', pxpScrollMode);
+  console.log('createOverlay: Restored state - opacity:', pxpLastOpacityValue, 'inverted:', pxpIsInverted, 'scrollMode:', pxpScrollMode);
 
   // Save initial values to localStorage if they don't exist (ensures defaults are persisted)
-  if (!localStorage.getItem('pxpOpacity')) {
-    console.log('createOverlay: Setting default opacity to', ppLastOpacityValue);
-    pxp.settings.setOpacity(ppLastOpacityValue);
+  if (!pxp.settings.hasOpacity()) {
+    console.log('createOverlay: Setting default opacity to', pxpLastOpacityValue);
+    pxp.settings.setOpacity(pxpLastOpacityValue);
   }
-  if (!localStorage.getItem('pxpInverted')) {
+  if (!pxp.settings.hasInverted()) {
     console.log('createOverlay: Setting default inverted to', pxpIsInverted);
     pxp.settings.setInverted(pxpIsInverted);
   }
-  if (!localStorage.getItem('pxpScrollMode')) {
+  if (!pxp.settings.hasScrollMode()) {
     console.log('createOverlay: Setting default scroll mode to', pxpScrollMode);
     pxp.settings.setScrollMode(pxpScrollMode);
   }
@@ -577,26 +562,58 @@ function createOverlay() {
   // Load the iframe using the reusable function
   pxpIframe = loadOverlayIframe();
 
-  // Add resize observer to handle dynamic content changes
-  const resizeObserver = new ResizeObserver(() => {
-    if (pxpIframe) pxpIframe.style.height = getPageHeight() + 'px';
-  });
-  resizeObserver.observe(document.body);
 
-  // Double-check height after a short delay for hard refresh scenarios
+  // IFRAME HEIGHT MANAGEMENT
+  // ========================
+  // The overlay iframe must cover the entire document height, not just the viewport.
+  // This ensures the overlay is visible when scrolling beyond the initial viewport.
+  
+  // Get initial document height (includes content below fold)
   const initialHeight = getPageHeight();
-  setTimeout(() => {
+  
+  // Watch for document size changes (content loading, dynamic elements, etc.)
+  const resizeObserver = new ResizeObserver(() => {
     if (pxpIframe) {
       const newHeight = getPageHeight();
+      
+      // CRITICAL: Only allow height to INCREASE, never decrease
+      // This prevents infinite shrinking loops where:
+      // 1. iframe shrinks → document height decreases
+      // 2. ResizeObserver fires → iframe shrinks more
+      // 3. Repeat until iframe disappears
       if (newHeight > initialHeight) pxpIframe.style.height = newHeight + 'px';
+    }
+  });
+  
+  // Observe document.body for size changes (most reliable element for height detection)
+  resizeObserver.observe(document.body);
+  
+  // FALLBACK: Double-check height after initial load
+  // Some pages load content asynchronously, so we recheck after a delay
+  // This ensures we catch any content that loads after initial DOM creation
+  setTimeout(() => {
+    if (pxpIframe) {
+      const currentHeight = getPageHeight();
+      pxpIframe.style.height = currentHeight + 'px';
     }
   }, HEIGHT_CHECK_DELAY);
 
+
   pxpControls = div({id: 'pxp-controls', class: 'top'}); // Default to top positioning
 
-  const ppIcon = div({id: 'pixel-perfect-icon'},
-    img({src: chrome.runtime.getURL('icons/pixel-perfect.svg'), alt: 'Pixel Perfect'}),
-  );
+  const pxpIcon = div({id: 'pixel-perfect-icon'});
+  pxpIcon.innerHTML = `
+    <svg viewBox="0 0 217.95 218.4">
+      <text class="txt" transform="translate(62 130.14) scale(.97 1)"><tspan x="0" y="0">px</tspan></text>
+      <path class="ring" d="M217.95,104.2h-11.9c-2.52-49.7-42.37-89.56-92.07-92.07V0h-10v12.12C54.27,14.64,14.42,54.5,11.9,104.2H0v10h11.9c2.52,49.7,42.37,89.56,92.07,92.07v12.12h10v-12.12c49.7-2.52,89.56-42.37,92.07-92.07h11.9v-10ZM113.97,196.25v-26.4h-10v26.4c-44.11-2.51-79.55-37.94-82.05-82.05h26.53v-10h-26.53C24.43,60.09,59.86,24.65,103.97,22.14v26.4h10v-26.4c44.11,2.51,79.55,37.94,82.05,82.05h-26.53v10h26.53c-2.51,44.11-37.94,79.55-82.05,82.05Z"/>
+    </svg>
+  `;
+
+  // Add click handler to toggle overlay state
+  pxpIcon.addEventListener('click', function () {
+    const currentState = pxp.settings.getOverlayState();
+    setOverlayState(!currentState);
+  });
 
 
   // Set input value to stored URL or default
@@ -714,7 +731,7 @@ function createOverlay() {
           
           // Hide settings menu if it was open due to error
           const settingsMenu = document.getElementById('settings-menu');
-          if (settingsMenu) settingsMenu.style.display = 'none';
+          if (settingsMenu) settingsMenu.classList.remove('active');
           
           // Update iframe with new URL without reloading page
           if (pxpIframe) pxpIframe.remove();
@@ -941,7 +958,7 @@ function createOverlay() {
       scrollModeSelect.disabled = false;
 
       // Restore last opacity (default to 100% for first time)
-      const targetOpacity = ppLastOpacityValue || 100;
+      const targetOpacity = pxpLastOpacityValue || 100;
       sliderThumb.style.left = targetOpacity + '%';
       sliderFill.style.width = targetOpacity + '%';
       const opacity = targetOpacity / 100;
@@ -949,7 +966,18 @@ function createOverlay() {
       value.textContent = targetOpacity + '%';
 
       // Update the global variable to ensure consistency
-      ppLastOpacityValue = targetOpacity;
+      pxpLastOpacityValue = targetOpacity;
+
+      // Check if URL is blank or has error - if so, open settings menu
+      const storedUrl = pxp.urls.getStoredUrl();
+      const hasBlankUrl = !storedUrl || !storedUrl.trim();
+      const hasErrorMessage = document.querySelector('.url-error-message');
+      
+      if (hasBlankUrl || hasErrorMessage) {
+        // Open settings menu
+        const settingsMenu = document.getElementById('settings-menu');
+        if (settingsMenu) settingsMenu.classList.add('active');
+      }
 
       // Check server status when turning ON
       if (pxpIframe && pxpIframe.src) {
@@ -969,7 +997,7 @@ function createOverlay() {
     } else {
       // Store current opacity before turning off
       const currentLeft = parseFloat(sliderThumb.style.left) || 0;
-      ppLastOpacityValue = Math.round(currentLeft);
+      pxpLastOpacityValue = Math.round(currentLeft);
 
       // Hide overlay
       pxpOverlay.classList.add('off');
@@ -1006,8 +1034,8 @@ function createOverlay() {
   const settingsBtn = div({class: 'settings-burger', title: 'Settings'});
   settingsBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   settingsBtn.addEventListener('click', function () {
-    const isVisible = settingsMenu.style.display !== 'none';
-    settingsMenu.style.display = isVisible ? 'none' : 'block';
+    const isVisible = settingsMenu.classList.contains('active');
+    settingsMenu.classList.toggle('active', !isVisible);
   });
 
   // Add close button
@@ -1128,7 +1156,7 @@ function createOverlay() {
     const opacity = percentage / 100;
     pxpIframe.style.opacity = opacity;
     value.textContent = Math.round(percentage) + '%';
-    ppLastOpacityValue = Math.round(percentage);
+    pxpLastOpacityValue = Math.round(percentage);
     pxp.settings.setOpacity(Math.round(percentage));
   }
 
@@ -1226,10 +1254,7 @@ function createOverlay() {
   });
 
   // Create settings menu
-  const settingsMenu = div({
-    id: 'settings-menu',
-    style: 'display: none;'
-  });
+  const settingsMenu = div({ id: 'settings-menu' });
 
   // Add URL input setting (first option)
   const urlOption = div({class: 'settings-option url-option'},
@@ -1358,7 +1383,7 @@ function createOverlay() {
   urlInputHandler.initIconState();
 
   // Check if this is the first time user and show instructions
-  const isFirstTime = !localStorage.getItem('pxpActive');
+  const isFirstTime = pxp.settings.isFirstTime();
   if (isFirstTime) showInstructions();
 
   // Close settings menu when clicking outside
@@ -1371,7 +1396,7 @@ function createOverlay() {
 
     // Close if clicking outside the settings menu
     if (!settingsMenu.contains(e.target)) {
-      settingsMenu.style.display = 'none';
+      settingsMenu.classList.remove('active');
     }
   });
 
@@ -1392,13 +1417,13 @@ function createOverlay() {
       dockControls(position);
 
       // Close settings menu after selection
-      settingsMenu.style.display = 'none';
+      settingsMenu.classList.remove('active');
     }
   });
 
 
   pxpControls.append(
-    ppIcon,
+    pxpIcon,
     onOffToggle,
     sliderContainer,
     value,
@@ -1427,6 +1452,7 @@ function createOverlay() {
   const hasValidUrl = storedUrl && storedUrl.trim();
   const storedOverlayState = pxp.settings.getOverlayState();
   const shouldShowOverlay = hasValidUrl && storedOverlayState;
+
   setOverlayState(shouldShowOverlay);
 
   document.addEventListener('wheel', globalWheelHandler, {passive: false});
@@ -1434,4 +1460,29 @@ function createOverlay() {
   window.addEventListener('scroll', throttle(syncIframeScroll, 10), {passive: true});
 
   document.body.append(pxpOverlay, pxpControls);
+
+
+  // Show simple update link in settings menu
+  function showUpdateLink(latestVersion) {
+    const settingsMenu = document.getElementById('settings-menu');
+    if (!settingsMenu || document.getElementById('update-link')) return;
+    
+    const updateLink = div({class: 'settings-option'},
+      a({
+        href: 'https://github.com/dave-fink/pixel-perfect-chrome-extension/releases',
+        target: '_blank',
+        id: 'update-link'
+      }, `Update available (v${latestVersion})`)
+    );
+    
+    // Add to bottom of settings menu
+    settingsMenu.appendChild(updateLink);
+  }
+
+  // Check for updates after UI creation and show simple link if available
+  setTimeout(() => {
+    pxp.updates.checkForUpdates((latestVersion) => {
+      if (latestVersion) showUpdateLink(latestVersion);
+    });
+  }, 3000);
 }

@@ -4,11 +4,15 @@ function domEl(tag, ...items) {
   if (!items?.length) return element;
   const [first, ...rest] = items;
   if (first && typeof first === 'object' && !(first instanceof Element)) {
-    Object.entries(first).forEach(([key, value]) =>
-      key.startsWith('on')
-        ? element.addEventListener(key.slice(2).toLowerCase(), value)
-        : element.setAttribute(key, Array.isArray(value) ? value.join(' ') : value)
-    );
+    Object.entries(first).forEach(([key, value]) => {
+      if (key.startsWith('on')) {
+        element.addEventListener(key.slice(2).toLowerCase(), value);
+      } else if (key in element && typeof element[key] === 'boolean') {
+        element[key] = value; // Use property for boolean attributes
+      } else {
+        element.setAttribute(key, Array.isArray(value) ? value.join(' ') : value);
+      }
+    });
     items = rest;
   }
   items.forEach(item => item != null && element.appendChild(item instanceof Element ? item : document.createTextNode(item)));
@@ -28,14 +32,24 @@ function li(...items) { return domEl('li', ...items); }
 
 // Utility function to get page height
 function getPageHeight() {
-  return Math.max(
-    document.body.scrollHeight,
-    document.body.offsetHeight,
-    document.documentElement.clientHeight,
-    document.documentElement.scrollHeight,
-    document.documentElement.offsetHeight,
-    window.innerHeight
+  // DOCUMENT HEIGHT CALCULATION
+  // ===========================
+  // Different browsers and page layouts require checking multiple properties
+  // to get the true document height (content that extends beyond viewport)
+  
+  const documentHeight = Math.max(
+    document.body.scrollHeight,           // Total scrollable content height
+    document.body.offsetHeight,           // Rendered height including borders
+    document.documentElement.clientHeight, // Viewport height (visible area)
+    document.documentElement.scrollHeight, // Total scrollable height (html element)
+    document.documentElement.offsetHeight  // Rendered height including borders (html)
   );
+  
+  // SAFETY FALLBACK: Ensure we never return less than viewport height
+  // This prevents the overlay from being smaller than what the user can see
+  const viewportHeight = window.innerHeight || 1000; // 1000px fallback for edge cases
+  
+  return Math.max(documentHeight, viewportHeight);
 }
 
 // Utility function to process URLs with path syncing
@@ -63,12 +77,100 @@ function processUrlWithPathSync(baseUrl, currentPath) {
   }
 }
 
+// Suppress noisy CORS errors in console (they're expected for iframe embedding)
+function suppressCorsErrors() {
+  const originalError = console.error;
+  console.error = function(...args) {
+    const message = args.join(' ');
+    
+    // Filter out common CORS and iframe-related errors that are expected
+    const corsPatterns = [
+      'CORS',
+      'Access to fetch',
+      'blocked by CORS policy',
+      'Access-Control-Allow-Origin',
+      'Response to preflight request',
+      'chrome-extension://'
+    ];
+    
+    const shouldIgnore = corsPatterns.some(pattern => 
+      message.includes(pattern)
+    );
+    
+    if (!shouldIgnore) {
+      originalError.apply(console, args);
+    }
+  };
+}
 
+// Auto-suppress CORS errors when utils.js loads
+suppressCorsErrors();
 
-
-
-// Centralized pxp namespace object
 const pxp = {
+  // Update checking with caching
+  updates: {
+    async checkForUpdates(callback) {
+      try {
+        const cacheKey = 'pxpVersionCheck';
+        const cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
+        const now = Date.now();
+        
+        // Check cache first
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { timestamp, latestVersion, currentVersion } = JSON.parse(cached);
+          
+          // Use cached result if less than 24 hours old and same current version
+          if (now - timestamp < cacheExpiry && currentVersion === chrome.runtime.getManifest().version) {
+            const isNewer = this.compareVersions(latestVersion, currentVersion) > 0;
+            callback(isNewer ? latestVersion : null);
+            return;
+          }
+        }
+        
+        const currentVersion = chrome.runtime.getManifest().version;
+        
+        // Fetch latest version from GitHub
+        const response = await fetch('https://raw.githubusercontent.com/dave-fink/pixel-perfect-chrome-extension/main/manifest.json');
+        if (!response.ok) throw new Error('Failed to fetch latest version');
+        
+        const latestManifest = await response.json();
+        const latestVersion = latestManifest.version;
+        
+        // Cache the result
+        localStorage.setItem(cacheKey, JSON.stringify({
+          timestamp: now,
+          latestVersion,
+          currentVersion
+        }));
+        
+        console.log('Version check:', { currentVersion, latestVersion });
+        
+        const isNewer = this.compareVersions(latestVersion, currentVersion) > 0;
+        callback(isNewer ? latestVersion : null);
+        
+      } catch (error) {
+        console.log('Version check failed:', error.message);
+        callback(null); // Return null on error
+      }
+    },
+    
+    compareVersions(a, b) {
+      const aParts = a.split('.').map(Number);
+      const bParts = b.split('.').map(Number);
+      const maxLength = Math.max(aParts.length, bParts.length);
+      
+      for (let i = 0; i < maxLength; i++) {
+        const aPart = aParts[i] || 0;
+        const bPart = bParts[i] || 0;
+        
+        if (aPart > bPart) return 1;
+        if (aPart < bPart) return -1;
+      }
+      return 0;
+    }
+  },
+
   // URL management
   urls: {
     getStoredUrl: () => localStorage.getItem('pxpUrl') || '',
@@ -105,9 +207,13 @@ const pxp = {
     },
     setDarkTheme: (dark) => localStorage.setItem('pxpDarkTheme', dark.toString()),
     getSyncUrlPath: () => localStorage.getItem('pxpSyncUrlPath') === 'true',
-    setSyncUrlPath: (sync) => localStorage.setItem('pxpSyncUrlPath', sync.toString())
+    setSyncUrlPath: (sync) => localStorage.setItem('pxpSyncUrlPath', sync.toString()),
+    // for initial setup
+    isFirstTime: () => localStorage.getItem('pxpActive') === null,
+    hasOpacity: () => localStorage.getItem('pxpOpacity') !== null,
+    hasInverted: () => localStorage.getItem('pxpInverted') !== null,
+    hasScrollMode: () => localStorage.getItem('pxpScrollMode') !== null
   },
-
 
 };
 
