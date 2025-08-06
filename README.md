@@ -33,7 +33,7 @@ A Chrome extension that overlays a locoal development URL directly on top of any
 
 ## ⚠️ Important - Known Issues
 
-> **Viewport height *vh* measurement challenges** - CSS vh units behave differently between the main page and overlay iframe, causing height mismatches due to how the iframe height.  There are challenges with this, but working on a fix.
+> **Viewport height *vh* measurement challenges** - CSS vh units behave differently between the main page and overlay iframe, causing height mismatches.  Working on a fix - [#6](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues/6)
 
 **If you encounter any problem - please [create a GitHub issue](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues).**
 
