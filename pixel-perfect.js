@@ -961,7 +961,7 @@ function createOverlay() {
   );
 
   // Add on/off class based on toggle state
-  const toggleInput = onOffToggle.querySelector('pxp-input');
+  const toggleInput = onOffToggle.querySelector('input');
 
   const updateControlsClass = () => {
     if (pxpControls && toggleInput) {

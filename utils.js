@@ -1,8 +1,10 @@
 // DOM Helper Functions
 function domEl(tag, ...items) {
-  // Add pxp- prefix to avoid CSS conflicts with host page
-  const prefixedTag = tag.startsWith('pxp-') ? tag : `pxp-${tag}`;
-  const element = document.createElement(prefixedTag);
+  // Add pxp- prefix to avoid CSS conflicts, but exclude form elements
+  const formElements = ['input', 'label', 'button', 'select', 'textarea', 'option', 'form'];
+  const shouldPrefix = !formElements.includes(tag.toLowerCase()) && !tag.startsWith('pxp-');
+  const finalTag = shouldPrefix ? `pxp-${tag}` : tag;
+  const element = document.createElement(finalTag);
   if (!items?.length) return element;
   const [first, ...rest] = items;
   if (first && typeof first === 'object' && !(first instanceof Element)) {
