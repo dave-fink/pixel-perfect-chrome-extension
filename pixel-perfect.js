@@ -945,7 +945,7 @@ function createOverlay() {
   );
 
   // Add on/off class based on toggle state
-  const toggleInput = onOffToggle.querySelector('input');
+  const toggleInput = onOffToggle.querySelector('pxp-input');
 
   const updateControlsClass = () => {
     if (pxpControls && toggleInput) {
@@ -1038,11 +1038,15 @@ function createOverlay() {
     pxp.settings.setOverlayState(isOn);
   };
 
-  // Add toggle event handler
-  toggleInput.addEventListener('change', function () {
-    console.log('Toggle changed to:', toggleInput.checked);
-    setOverlayState(toggleInput.checked);
-  });
+  // Add toggle event handler with null check
+  if (toggleInput) {
+    toggleInput.addEventListener('change', function () {
+      console.log('Toggle changed to:', toggleInput.checked);
+      setOverlayState(toggleInput.checked);
+    });
+  } else {
+    console.error('❌ toggleInput not found in onOffToggle:', onOffToggle);
+  }
 
 
   // Settings burger icon
@@ -1227,8 +1231,11 @@ function createOverlay() {
       pxp.settings.setScrollMode(newMode);
 
       // Update button text
-      const buttonText = scrollModeSelect.querySelector('span');
-      buttonText.textContent = dropdownOption.querySelector('span:last-child').textContent;
+      const buttonText = scrollModeSelect.querySelector('pxp-span');
+      const sourceText = dropdownOption.querySelector('pxp-span:last-child');
+      if (buttonText && sourceText) {
+        buttonText.textContent = sourceText.textContent;
+      }
 
       // Update selected state
       this.querySelectorAll('.pxp-dropdown-option').forEach(option => {
