@@ -7,9 +7,9 @@ pxp-div, pxp-span, pxp-img, pxp-link, pxp-a, pxp-b, pxp-ol, pxp-li {
 pxp-div { display: block; }
 pxp-span { display: inline; }
 pxp-img { display: inline-block; }
-pxp-a { display: inline; text-decoration: underline; cursor: pointer; }
-pxp-b { display: inline; font-weight: bold; }
-pxp-ol { display: block; list-style-type: decimal; margin: 1em 0; padding-left: 40px; }
+pxp-a { display: inline; }
+pxp-b { display: inline; }
+pxp-ol { display: block; }
 pxp-li { display: list-item; }
 
 #pxp-controls {

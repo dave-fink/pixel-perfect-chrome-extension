@@ -1,10 +1,6 @@
 // DOM Helper Functions
 function domEl(tag, ...items) {
-  // Add pxp- prefix to avoid CSS conflicts, but exclude form elements
-  const formElements = ['input', 'label', 'button', 'select', 'textarea', 'option', 'form'];
-  const shouldPrefix = !formElements.includes(tag.toLowerCase()) && !tag.startsWith('pxp-');
-  const finalTag = shouldPrefix ? `pxp-${tag}` : tag;
-  const element = document.createElement(finalTag);
+  const element = document.createElement(tag);
   if (!items?.length) return element;
   const [first, ...rest] = items;
   if (first && typeof first === 'object' && !(first instanceof Element)) {
@@ -23,16 +19,50 @@ function domEl(tag, ...items) {
   return element;
 }
 
-function div(...items) { return domEl('div', ...items); }
-function span(...items) { return domEl('span', ...items); }
+function div(...items) { 
+  const el = domEl('pxp-div', ...items); 
+  el.style.display = 'block'; 
+  return el; 
+}
+function span(...items) { 
+  const el = domEl('pxp-span', ...items); 
+  el.style.display = 'inline'; 
+  return el; 
+}
 function label(...items) { return domEl('label', ...items); }
 function input(...items) { return domEl('input', ...items); }
-function img(...items) { return domEl('img', ...items); }
-function link(...items) { return domEl('link', ...items); }
-function a(...items) { return domEl('a', ...items); }
-function b(...items) { return domEl('b', ...items); }
-function ol(...items) { return domEl('ol', ...items); }
-function li(...items) { return domEl('li', ...items); }
+function img(...items) { 
+  const el = domEl('pxp-img', ...items); 
+  el.style.display = 'inline-block'; 
+  return el; 
+}
+function link(...items) { return domEl('pxp-link', ...items); }
+function a(...items) { 
+  const el = domEl('pxp-a', ...items); 
+  el.style.display = 'inline'; 
+  el.style.textDecoration = 'underline'; 
+  el.style.cursor = 'pointer'; 
+  return el; 
+}
+function b(...items) { 
+  const el = domEl('pxp-b', ...items); 
+  el.style.display = 'inline'; 
+  el.style.fontWeight = 'bold'; 
+  return el; 
+}
+function ol(...items) { 
+  const el = domEl('pxp-ol', ...items); 
+  el.style.display = 'block'; 
+  el.style.listStyleType = 'decimal'; 
+  el.style.margin = '1em 0'; 
+  el.style.paddingLeft = '40px'; 
+  return el; 
+}
+function li(...items) { 
+  const el = domEl('pxp-li', ...items); 
+  el.style.display = 'list-item'; 
+  return el; 
+}
 
 // Utility function to get page height
 function getPageHeight() {
