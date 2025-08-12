@@ -13,7 +13,7 @@ function showErrorInSettings(url, errorDetails = '') {
 
   // Add error class to overlay if it exists
   const overlay = document.getElementById('pxp-overlay');
-  if (overlay) overlay.classList.add('error');
+  if (overlay)  overlay.classList.add('error');
 
   // Update error display in settings
   updateSettingsErrorDisplay(url, errorDetails);
@@ -457,7 +457,7 @@ function toggleOverlay() {
     // Remove event listeners
     document.removeEventListener('wheel', globalWheelHandler);
     document.removeEventListener('keydown', arrowKeyHandler);
-
+    // TODO: revisit scroll positon when refreshing  window.removeEventListener('resize', adjustOverlayPosition);
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
 
     // Store inactive state
@@ -538,19 +538,19 @@ function createOverlay() {
   pxpIsInverted = pxp.settings.getInverted();
   pxpScrollMode = pxp.settings.getScrollMode();
 
-
+  console.log('createOverlay: Restored state - opacity:', pxpLastOpacityValue, 'inverted:', pxpIsInverted, 'scrollMode:', pxpScrollMode);
 
   // Save initial values to localStorage if they don't exist (ensures defaults are persisted)
   if (!pxp.settings.hasOpacity()) {
-  
+    console.log('createOverlay: Setting default opacity to', pxpLastOpacityValue);
     pxp.settings.setOpacity(pxpLastOpacityValue);
   }
   if (!pxp.settings.hasInverted()) {
-  
+    console.log('createOverlay: Setting default inverted to', pxpIsInverted);
     pxp.settings.setInverted(pxpIsInverted);
   }
   if (!pxp.settings.hasScrollMode()) {
-  
+    console.log('createOverlay: Setting default scroll mode to', pxpScrollMode);
     pxp.settings.setScrollMode(pxpScrollMode);
   }
 
@@ -869,10 +869,25 @@ function createOverlay() {
     div({id: 'slider-fill'}),
     div({id: 'slider-thumb'})
   );
+  
+  console.log('🎛️ Created sliderContainer:', sliderContainer);
 
   // Get references to slider elements
   const sliderThumb = sliderContainer.querySelector('#slider-thumb');
   const sliderFill = sliderContainer.querySelector('#slider-fill');
+  
+  console.log('🎛️ Element queries:', { 
+    sliderThumb, 
+    sliderFill, 
+    containerHTML: sliderContainer.innerHTML,
+    containerTagName: sliderContainer.tagName
+  });
+  
+  // Safety check - if elements are not found, log error and return early
+  if (!sliderThumb || !sliderFill) {
+    console.error('❌ Slider elements not found:', { sliderThumb, sliderFill, sliderContainer });
+    return;
+  }
 
   // Set percentage text to match stored opacity
   const opacityValue = pxp.settings.getOpacity().toString();
@@ -1002,7 +1017,7 @@ function createOverlay() {
       // Hide overlay
       pxpOverlay.classList.add('off');
 
-      // Disable slider functionality but keep other controls enabled
+      // todo: move to CSS - Disable slider functionality but keep other controls enabled
       sliderContainer.classList.add('disabled');
       sliderContainer.style.pointerEvents = 'none';
       urlInput.disabled = false;
@@ -1025,6 +1040,7 @@ function createOverlay() {
 
   // Add toggle event handler
   toggleInput.addEventListener('change', function () {
+    console.log('Toggle changed to:', toggleInput.checked);
     setOverlayState(toggleInput.checked);
   });
 
@@ -1063,26 +1079,30 @@ function createOverlay() {
   let sliderStartX = 0;
   let sliderStartLeft = 0;
 
-  sliderThumb.addEventListener('mousedown', function (e) {
-    isSliderDragging = true;
-    sliderStartX = e.clientX;
-    sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
-    document.addEventListener('mousemove', onSliderMouseMove);
-    document.addEventListener('mouseup', onSliderMouseUp);
-  });
+  // Add event listeners with null checks
+  if (sliderThumb) {
+    sliderThumb.addEventListener('mousedown', function (e) {
+      isSliderDragging = true;
+      sliderStartX = e.clientX;
+      sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
+      document.addEventListener('mousemove', onSliderMouseMove);
+      document.addEventListener('mouseup', onSliderMouseUp);
+    });
 
-  // Add touch support for slider thumb
-  sliderThumb.addEventListener('touchstart', function (e) {
-    e.preventDefault();
-    isSliderDragging = true;
-    const touch = e.touches[0];
-    sliderStartX = touch.clientX;
-    sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
-    document.addEventListener('touchmove', onSliderTouchMove, {passive: false});
-    document.addEventListener('touchend', onSliderTouchEnd, {passive: false});
-  });
+    // Add touch support for slider thumb
+    sliderThumb.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      isSliderDragging = true;
+      const touch = e.touches[0];
+      sliderStartX = touch.clientX;
+      sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
+      document.addEventListener('touchmove', onSliderTouchMove, {passive: false});
+      document.addEventListener('touchend', onSliderTouchEnd, {passive: false});
+    });
+  }
 
-  sliderContainer.addEventListener('click', function (e) {
+  if (sliderContainer) {
+    sliderContainer.addEventListener('click', function (e) {
     if (!isSliderDragging) {
       const rect = sliderContainer.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -1093,10 +1113,10 @@ function createOverlay() {
       sliderFill.style.width = clampedPercentage + '%';
       updateOpacity(clampedPercentage);
     }
-  });
+    });
 
-  // Add touch support for slider container
-  sliderContainer.addEventListener('touchstart', function (e) {
+    // Add touch support for slider container
+    sliderContainer.addEventListener('touchstart', function (e) {
     if (!isSliderDragging) {
       e.preventDefault();
       const rect = sliderContainer.getBoundingClientRect();
@@ -1109,17 +1129,7 @@ function createOverlay() {
       sliderFill.style.width = clampedPercentage + '%';
       updateOpacity(clampedPercentage);
     }
-  }, {passive: false});
-
-  // Snap function - snaps to 50% if within 3% range
-  function snapToFifty(value) {
-    const snapTarget = 50;
-    const snapRange = 3;
-    
-    if (Math.abs(value - snapTarget) <= snapRange) {
-      return snapTarget;
-    }
-    return value;
+    }, {passive: false});
   }
 
   function onSliderMouseMove(e) {
@@ -1129,13 +1139,10 @@ function createOverlay() {
     const deltaX = e.clientX - sliderStartX;
     const newLeft = sliderStartLeft + (deltaX / rect.width) * 100;
     const clampedLeft = Math.max(0, Math.min(100, newLeft));
-    
-    // Apply snap to 50% if within range
-    const snappedLeft = snapToFifty(clampedLeft);
 
-    sliderThumb.style.left = snappedLeft + '%';
-    sliderFill.style.width = snappedLeft + '%';
-    updateOpacity(snappedLeft);
+    sliderThumb.style.left = clampedLeft + '%';
+    sliderFill.style.width = clampedLeft + '%';
+    updateOpacity(clampedLeft);
   }
 
   function onSliderMouseUp() {
@@ -1153,13 +1160,10 @@ function createOverlay() {
     const deltaX = touch.clientX - sliderStartX;
     const newLeft = sliderStartLeft + (deltaX / rect.width) * 100;
     const clampedLeft = Math.max(0, Math.min(100, newLeft));
-    
-    // Apply snap to 50% if within range
-    const snappedLeft = snapToFifty(clampedLeft);
 
-    sliderThumb.style.left = snappedLeft + '%';
-    sliderFill.style.width = snappedLeft + '%';
-    updateOpacity(snappedLeft);
+    sliderThumb.style.left = clampedLeft + '%';
+    sliderFill.style.width = clampedLeft + '%';
+    updateOpacity(clampedLeft);
   }
 
   function onSliderTouchEnd() {
@@ -1380,6 +1384,7 @@ function createOverlay() {
       const syncedUrl = pxp.urls.getUrlWithPathSync();
       if (syncedUrl !== currentStoredUrl) {
         pxp.urls.setStoredUrl(syncedUrl);
+        console.log('Updated stored URL to match synced URL:', syncedUrl);
         
         const urlInput = document.getElementById('url-input');
         if (urlInput) {

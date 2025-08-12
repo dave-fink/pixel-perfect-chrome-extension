@@ -1,6 +1,8 @@
 // DOM Helper Functions
 function domEl(tag, ...items) {
-  const element = document.createElement(tag);
+  // Add pxp- prefix to avoid CSS conflicts with host page
+  const prefixedTag = tag.startsWith('pxp-') ? tag : `pxp-${tag}`;
+  const element = document.createElement(prefixedTag);
   if (!items?.length) return element;
   const [first, ...rest] = items;
   if (first && typeof first === 'object' && !(first instanceof Element)) {

@@ -1,3 +1,19 @@
+/* Custom element defaults to ensure they behave like standard elements */
+pxp-div, pxp-span, pxp-label, pxp-input, pxp-img, pxp-link, pxp-a, pxp-b, pxp-ol, pxp-li {
+  display: initial;
+  box-sizing: initial;
+}
+
+pxp-div { display: block; }
+pxp-span { display: inline; }
+pxp-label { display: inline-block; cursor: pointer; }
+pxp-input { display: inline-block; }
+pxp-img { display: inline-block; }
+pxp-a { display: inline; text-decoration: underline; cursor: pointer; }
+pxp-b { display: inline; font-weight: bold; }
+pxp-ol { display: block; list-style-type: decimal; margin: 1em 0; padding-left: 40px; }
+pxp-li { display: list-item; }
+
 #pxp-controls {
   --border-radius: 12px;
   --blue: #0075ff;
@@ -193,7 +209,7 @@
     min-width: 40px;
     height: 20px;
 
-    input {
+    pxp-input {
       opacity: 0;
       width: 0;
       height: 0;
@@ -695,13 +711,13 @@
     position: relative;
     z-index: 1;
   
-    ol {
+    pxp-ol {
       margin: 0;
       padding-left: 0;
       list-style: none;
     }
     
-    li {
+    pxp-li {
       margin-bottom: 16px;
       font-size: 16px;
       line-height: 1.6;
@@ -710,7 +726,7 @@
       border-radius: 8px;
       position: relative;
 
-      b {
+      pxp-b {
         font-weight: 600;
         color: #fff;
       }
@@ -760,7 +776,7 @@
     margin: 40px auto 0 auto;
     color: #b8b8b8;
 
-    a {
+    pxp-a {
       color: #b8b8b8;
     }
   }
