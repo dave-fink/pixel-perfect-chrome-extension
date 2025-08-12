@@ -492,9 +492,24 @@ function toggleOverlay() {
 function loadOverlayIframe() {
   // Get URL with cache buster
   const overlayURL = pxp.urls.getIframeUrl();
+  console.log('📺 loadOverlayIframe called with URL:', overlayURL);
+  
+  // Check if we have a valid URL
+  const baseUrl = pxp.urls.getStoredUrl();
+  if (!baseUrl || !baseUrl.trim()) {
+    console.log('⚠️ No URL set - iframe will not load');
+    // Create a placeholder iframe that won't load anything
+    const placeholder = domEl('iframe', {
+      style: 'height: 100vh; width: 100%; border: none; background: rgba(0,0,0,0.1);',
+      'data-placeholder': 'true'
+    });
+    console.log('📺 Created placeholder iframe');
+    return placeholder;
+  }
 
   // Ensure DOM is ready (especially for hard refreshes)
   const initialHeight = getPageHeight();
+  console.log('📺 Creating iframe with height:', initialHeight);
   pxpIframe = domEl('iframe', {
     src: overlayURL,
     style: 'height: ' + initialHeight + 'px;',
@@ -529,6 +544,7 @@ function loadOverlayIframe() {
     pxpLastOpacityValue = iframeOpacity;
   }
 
+  console.log('📺 Iframe created successfully:', pxpIframe);
   return pxpIframe;
 }
 
@@ -956,8 +972,13 @@ function createOverlay() {
 
   // Centralized function to handle overlay state changes
   const setOverlayState = (isOn) => {
+    console.log('🎛️ setOverlayState called with:', isOn);
+    console.log('🎛️ Current state:', { pxpOverlay, pxpIframe, toggleInput });
+    
     // Update toggle input
-    toggleInput.checked = isOn;
+    if (toggleInput) {
+      toggleInput.checked = isOn;
+    }
 
     // Update control classes
     updateControlsClass();
@@ -988,10 +1009,16 @@ function createOverlay() {
       const hasBlankUrl = !storedUrl || !storedUrl.trim();
       const hasErrorMessage = document.querySelector('.url-error-message');
       
+      console.log('🔍 URL check:', { storedUrl, hasBlankUrl, hasErrorMessage });
+      
       if (hasBlankUrl || hasErrorMessage) {
+        console.log('⚠️ No URL or error - opening settings menu');
         // Open settings menu
         const settingsMenu = document.getElementById('settings-menu');
-        if (settingsMenu) settingsMenu.classList.add('active');
+        if (settingsMenu) {
+          settingsMenu.classList.add('active');
+          console.log('🔧 Settings menu opened');
+        }
       }
 
       // Check server status when turning ON
@@ -1041,7 +1068,8 @@ function createOverlay() {
   // Add toggle event handler with null check
   if (toggleInput) {
     toggleInput.addEventListener('change', function () {
-      console.log('Toggle changed to:', toggleInput.checked);
+      console.log('🔄 Toggle changed to:', toggleInput.checked);
+      console.log('🔄 Current overlay elements:', { pxpOverlay, pxpIframe });
       setOverlayState(toggleInput.checked);
     });
   } else {
@@ -1486,7 +1514,9 @@ function createOverlay() {
   document.addEventListener('keydown', arrowKeyHandler);
   window.addEventListener('scroll', throttle(syncIframeScroll, 10), {passive: true});
 
+  console.log('🎯 Appending elements to body:', { pxpOverlay, pxpControls, pxpIframe });
   document.body.append(pxpOverlay, pxpControls);
+  console.log('🎯 Elements appended! Overlay should be visible now.');
 
 
   // Show simple update link in settings menu
