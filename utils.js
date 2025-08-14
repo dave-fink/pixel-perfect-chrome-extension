@@ -5,8 +5,8 @@ function domEl(tag, ...items) {
   const [first, ...rest] = items;
   if (first && typeof first === 'object' && !(first instanceof Element)) {
     Object.entries(first).forEach(([key, value]) => {
-      if (key.startsWith('on')) {
-        element.addEventListener(key.slice(2).toLowerCase(), value);
+      if (key === 'html') {
+        element.innerHTML = value;
       } else if (key in element && typeof element[key] === 'boolean') {
         element[key] = value; // Use property for boolean attributes
       } else {
@@ -19,50 +19,11 @@ function domEl(tag, ...items) {
   return element;
 }
 
-function div(...items) { 
-  const el = domEl('pxp-div', ...items); 
-  el.style.display = 'block'; 
-  return el; 
-}
-function span(...items) { 
-  const el = domEl('pxp-span', ...items); 
-  el.style.display = 'inline'; 
-  return el; 
-}
+function pxpEl(...items) { return domEl('pxp', ...items); }
 function label(...items) { return domEl('label', ...items); }
 function input(...items) { return domEl('input', ...items); }
-function img(...items) { 
-  const el = domEl('pxp-img', ...items); 
-  el.style.display = 'inline-block'; 
-  return el; 
-}
-function link(...items) { return domEl('pxp-link', ...items); }
-function a(...items) { 
-  const el = domEl('pxp-a', ...items); 
-  el.style.display = 'inline'; 
-  el.style.textDecoration = 'underline'; 
-  el.style.cursor = 'pointer'; 
-  return el; 
-}
-function b(...items) { 
-  const el = domEl('pxp-b', ...items); 
-  el.style.display = 'inline'; 
-  el.style.fontWeight = 'bold'; 
-  return el; 
-}
-function ol(...items) { 
-  const el = domEl('pxp-ol', ...items); 
-  el.style.display = 'block'; 
-  el.style.listStyleType = 'decimal'; 
-  el.style.margin = '1em 0'; 
-  el.style.paddingLeft = '40px'; 
-  return el; 
-}
-function li(...items) { 
-  const el = domEl('pxp-li', ...items); 
-  el.style.display = 'list-item'; 
-  return el; 
-}
+function link(...items) { return domEl('link', ...items); }
+function a(...items) { return domEl('a', ...items); }
 
 // Utility function to get page height
 function getPageHeight() {
@@ -273,16 +234,11 @@ function throttle(func, limit) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     domEl,
-    div,
-    span,
+    pxpEl,
     label,
     input,
-    img,
     link,
     a,
-    b,
-    ol,
-    li,
     getPageHeight,
     processUrlWithPathSync,
     throttle,
