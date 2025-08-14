@@ -1,4 +1,6 @@
-#pxp-controls {
+pxp { display: block; } 
+
+pxp#pxp-controls {
   --border-radius: 12px;
   --blue: #0075ff;
   --height: 50px;
@@ -65,7 +67,7 @@
   }
 
   /* Button states */
-  #pixel-perfect-icon {
+  pxp#pixel-perfect-icon {
     height: 34px;
     width: 34px;
     display: flex;
@@ -90,7 +92,7 @@
     }
   }
 
-  #opacity-slider {
+  pxp#opacity-slider {
     position: relative;
     width: 160px;
     height: 4px;
@@ -183,8 +185,6 @@
       cursor: not-allowed;
     }
   }
-
-
 
   .switch {
     position: relative;
@@ -505,7 +505,6 @@
           .error & { border: 1px solid var(--red) !important}
         }
         
-
         .url-error-message {
           position: absolute;
           display: flex;
@@ -540,13 +539,11 @@
         
         #url-go-icon {
           color: #4a9eff;
-          
           svg { opacity: 1 }
         }
         
         #url-error-icon {
           color: var(--red);
-          
           svg { opacity: 1 }
         }
         
@@ -570,6 +567,16 @@
           }
         }
       }
+    }
+
+    #update-link {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      color: #4ade80;
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 500;
     }
   }
   
@@ -597,7 +604,7 @@
 }
 
 
-#pxp-overlay {
+pxp#pxp-overlay {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -641,7 +648,7 @@
 
 
 
-#pxp-instructions-overlay {
+pxp#pxp-instructions-overlay {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -695,13 +702,7 @@
     position: relative;
     z-index: 1;
   
-    ol {
-      margin: 0;
-      padding-left: 0;
-      list-style: none;
-    }
-    
-    li {
+    .pxp-step-item {
       margin-bottom: 16px;
       font-size: 16px;
       line-height: 1.6;
@@ -710,13 +711,13 @@
       border-radius: 8px;
       position: relative;
 
-      b {
+      pxp-b {
         font-weight: 600;
         color: #fff;
       }
       
       &::before {
-        content: counter(list-item);
+        content: attr(data-step);
         position: absolute;
         left: 10px;
         top: 50%;
@@ -763,20 +764,5 @@
     a {
       color: #b8b8b8;
     }
-  }
-}
-
-/* UPDATE LINK - Simple text link like other settings */
-#update-link {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  color: #4ade80;
-  text-decoration: none;
-  font-size: 11px;
-  font-weight: 500;
-
-  &:hover {
-    text-decoration: underline;
   }
 }

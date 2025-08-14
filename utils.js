@@ -5,8 +5,8 @@ function domEl(tag, ...items) {
   const [first, ...rest] = items;
   if (first && typeof first === 'object' && !(first instanceof Element)) {
     Object.entries(first).forEach(([key, value]) => {
-      if (key.startsWith('on')) {
-        element.addEventListener(key.slice(2).toLowerCase(), value);
+      if (key === 'html') {
+        element.innerHTML = value;
       } else if (key in element && typeof element[key] === 'boolean') {
         element[key] = value; // Use property for boolean attributes
       } else {
@@ -19,16 +19,11 @@ function domEl(tag, ...items) {
   return element;
 }
 
-function div(...items) { return domEl('div', ...items); }
-function span(...items) { return domEl('span', ...items); }
+function pxpEl(...items) { return domEl('pxp', ...items); }
 function label(...items) { return domEl('label', ...items); }
 function input(...items) { return domEl('input', ...items); }
-function img(...items) { return domEl('img', ...items); }
 function link(...items) { return domEl('link', ...items); }
 function a(...items) { return domEl('a', ...items); }
-function b(...items) { return domEl('b', ...items); }
-function ol(...items) { return domEl('ol', ...items); }
-function li(...items) { return domEl('li', ...items); }
 
 // Utility function to get page height
 function getPageHeight() {
@@ -239,16 +234,11 @@ function throttle(func, limit) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     domEl,
-    div,
-    span,
+    pxpEl,
     label,
     input,
-    img,
     link,
     a,
-    b,
-    ol,
-    li,
     getPageHeight,
     processUrlWithPathSync,
     throttle,

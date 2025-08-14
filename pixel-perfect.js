@@ -13,7 +13,7 @@ function showErrorInSettings(url, errorDetails = '') {
 
   // Add error class to overlay if it exists
   const overlay = document.getElementById('pxp-overlay');
-  if (overlay) overlay.classList.add('error');
+  if (overlay)  overlay.classList.add('error');
 
   // Update error display in settings
   updateSettingsErrorDisplay(url, errorDetails);
@@ -31,8 +31,8 @@ function updateSettingsErrorDisplay(url, errorDetails) {
   if (inputWrapper) inputWrapper.classList.add('error'); 
 
   // Create new error message
-  const errorElement = div({class: 'url-error-message'},
-    span({class: 'error-title'}, errorDetails),
+  const errorElement = pxpEl({class: 'url-error-message'},
+    pxpEl({class: 'error-title'}, errorDetails),
   );
 
   // Insert error message inside the URL input container as the last item
@@ -342,29 +342,27 @@ function showInstructions() {
   const isFirstTimeForInstructions = pxp.settings.isFirstTime();
 
   // Create and show instructions overlay
-  const instructionsOverlay = div({id: 'pxp-instructions-overlay'});
+  const instructionsOverlay = pxpEl({id: 'pxp-instructions-overlay'});
 
-  const instructionsContent = div({id: 'pxp-instructions'},
-    div({class: 'pxp-title'},
-      img({
-        src: chrome.runtime.getURL('icons/pixel-perfect.svg'),
-        style: 'width: 34px; height: 34px; margin-right: 12px; vertical-align: middle;'
-      }),
-      'Pixel Perfect Overlay'
-    ),
-    div({class: 'pxp-description'},
-      'Overlay your local development page over any live page to quickly identify layout differences and adjust with precision.'
-    ),
-    div({class: 'pxp-steps'},
-      ol({},
-        li('Enter your development ', b('Overlay URL')),
-        li('Play with the ', b('opacity'), ' and ', b('invert'), ' colors'),
-        li(b('Align'), ' elements ', b('instantly'), ' as you develop'),
-        li(b('Toggle on/off'), ' to compare - ', b('no more tab switching!')),
-      )
-    ),
-    div({class: 'pxp-button'}, 'Get started!'),
-  );
+  const instructionsContent = pxpEl({ id: 'pxp-instructions', 
+    html: `
+    <pxp class="pxp-title">
+      <img src="${chrome.runtime.getURL('icons/pixel-perfect.svg')}" style="width: 34px; height: 34px; margin-right: 12px; vertical-align: middle;"></pxp-img>
+      Pixel Perfect Overlay
+    </pxp>
+    <pxp class="pxp-description">
+      Overlay your local development page over any live page to quickly identify layout differences and adjust with precision.
+    </pxp>
+    <pxp class="pxp-steps">
+      <pxp class="pxp-step-item" data-step="1">Enter your development <pxp-b>Overlay URL</pxp-b></pxp>
+      <pxp class="pxp-step-item" data-step="2">Play with the <pxp-b>opacity</pxp-b> and <pxp-b>invert</pxp-b> colors</pxp>
+      <pxp class="pxp-step-item" data-step="3"><pxp-b>Align</pxp-b> elements <pxp-b>instantly</pxp-b> as you develop</pxp>
+      <pxp class="pxp-step-item" data-step="4"><pxp-b>Toggle on/off</pxp-b> to compare - <pxp-b>no more tab switching!</pxp-b></pxp>
+    </pxp>
+    <pxp class="pxp-button">Get started!</pxp>
+  `
+  });
+
 
   instructionsOverlay.appendChild(instructionsContent);
   document.body.appendChild(instructionsOverlay);
@@ -457,7 +455,7 @@ function toggleOverlay() {
     // Remove event listeners
     document.removeEventListener('wheel', globalWheelHandler);
     document.removeEventListener('keydown', arrowKeyHandler);
-
+    // TODO: revisit scroll positon when refreshing  window.removeEventListener('resize', adjustOverlayPosition);
     window.removeEventListener('scroll', throttle(syncIframeScroll, 16));
 
     // Store inactive state
@@ -493,8 +491,23 @@ function loadOverlayIframe() {
   // Get URL with cache buster
   const overlayURL = pxp.urls.getIframeUrl();
 
+  
+  // Check if we have a valid URL
+  const baseUrl = pxp.urls.getStoredUrl();
+  if (!baseUrl || !baseUrl.trim()) {
+
+    // Create a placeholder iframe that won't load anything
+    const placeholder = domEl('iframe', {
+      style: 'height: 100vh; width: 100%; border: none; background: rgba(0,0,0,0.1);',
+      'data-placeholder': 'true'
+    });
+
+    return placeholder;
+  }
+
   // Ensure DOM is ready (especially for hard refreshes)
   const initialHeight = getPageHeight();
+
   pxpIframe = domEl('iframe', {
     src: overlayURL,
     style: 'height: ' + initialHeight + 'px;',
@@ -538,30 +551,27 @@ function createOverlay() {
   pxpIsInverted = pxp.settings.getInverted();
   pxpScrollMode = pxp.settings.getScrollMode();
 
-
-
   // Save initial values to localStorage if they don't exist (ensures defaults are persisted)
   if (!pxp.settings.hasOpacity()) {
-  
+
     pxp.settings.setOpacity(pxpLastOpacityValue);
   }
   if (!pxp.settings.hasInverted()) {
-  
+
     pxp.settings.setInverted(pxpIsInverted);
   }
   if (!pxp.settings.hasScrollMode()) {
-  
+
     pxp.settings.setScrollMode(pxpScrollMode);
   }
 
   // Get URL with path syncing applied
   const iframeUrl = pxp.urls.getUrlWithPathSync();
 
-  pxpOverlay = div({id: 'pxp-overlay'});
+  pxpOverlay = pxpEl({id: 'pxp-overlay'});
 
   // Load the iframe using the reusable function
   pxpIframe = loadOverlayIframe();
-
 
   // IFRAME HEIGHT MANAGEMENT
   // ========================
@@ -599,15 +609,16 @@ function createOverlay() {
   }, HEIGHT_CHECK_DELAY);
 
 
-  pxpControls = div({id: 'pxp-controls', class: 'top'}); // Default to top positioning
+  pxpControls = pxpEl({id: 'pxp-controls', class: 'top'}); // Default to top positioning
 
-  const pxpIcon = div({id: 'pixel-perfect-icon'});
-  pxpIcon.innerHTML = `
+  const pxpIcon = pxpEl({id: 'pixel-perfect-icon', 
+    html: `
     <svg viewBox="0 0 217.95 218.4">
       <text class="txt" transform="translate(62 130.14) scale(.97 1)"><tspan x="0" y="0">px</tspan></text>
       <path class="ring" d="M217.95,104.2h-11.9c-2.52-49.7-42.37-89.56-92.07-92.07V0h-10v12.12C54.27,14.64,14.42,54.5,11.9,104.2H0v10h11.9c2.52,49.7,42.37,89.56,92.07,92.07v12.12h10v-12.12c49.7-2.52,89.56-42.37,92.07-92.07h11.9v-10ZM113.97,196.25v-26.4h-10v26.4c-44.11-2.51-79.55-37.94-82.05-82.05h26.53v-10h-26.53C24.43,60.09,59.86,24.65,103.97,22.14v26.4h10v-26.4c44.11,2.51,79.55,37.94,82.05,82.05h-26.53v10h26.53c-2.51,44.11-37.94,79.55-82.05,82.05Z"/>
     </svg>
-  `;
+    `
+  });
 
   // Add click handler to toggle overlay state
   pxpIcon.addEventListener('click', function () {
@@ -658,18 +669,10 @@ function createOverlay() {
 
   // Add focus class only when input is empty (placeholder shown)
   if (!inputUrl) urlInput.classList.add('focus');
-
-  const urlGoIcon = div({id: 'url-go-icon'});
-  urlGoIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12.293 5.293a1 1 0 011.414 1.414L10.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4z" transform="rotate(180 10 10)"/></svg>';
-  
-  const urlErrorIcon = div({id: 'url-error-icon'});
-  urlErrorIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M10 2C5.6 2 2 5.6 2 10s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm1 13H9v-2h2v2zm0-3H9V6h2v6z"/></svg>';
-
-  const urlLockIcon = div({ id: 'url-lock-icon' });
-  urlLockIcon.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 10V8C6 5.79 7.79 4 10 4H14C16.21 4 18 5.79 18 8V10H19C19.55 10 20 10.45 20 11V19C20 19.55 19.55 20 19 20H5C4.45 20 4 19.55 4 19V11C4 10.45 4.45 10 5 10H6ZM8 8V10H16V8C16 6.9 15.1 6 14 6H10C8.9 6 8 6.9 8 8Z"/></svg>';
-
-  const urlNewWindowIcon = div({ class: 'url-new-window-icon' });
-  urlNewWindowIcon.innerHTML = '<svg viewBox="0 0 358.05 355.34" xmlns="http://www.w3.org/2000/svg"><path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/><path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/></svg>';
+  const urlGoIcon = pxpEl({id: 'url-go-icon', html: '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12.293 5.293a1 1 0 011.414 1.414L10.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4z" transform="rotate(180 10 10)"/></svg>' });
+  const urlErrorIcon = pxpEl({id: 'url-error-icon', html: '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M10 2C5.6 2 2 5.6 2 10s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm1 13H9v-2h2v2zm0-3H9V6h2v6z"/></svg>'});
+  const urlLockIcon = pxpEl({ id: 'url-lock-icon', html: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 10V8C6 5.79 7.79 4 10 4H14C16.21 4 18 5.79 18 8V10H19C19.55 10 20 10.45 20 11V19C20 19.55 19.55 20 19 20H5C4.45 20 4 19.55 4 19V11C4 10.45 4.45 10 5 10H6ZM8 8V10H16V8C16 6.9 15.1 6 14 6H10C8.9 6 8 6.9 8 8Z"/></svg>' });
+  const urlNewWindowIcon = pxpEl({ class: 'url-new-window-icon', html: '<svg viewBox="0 0 358.05 355.34" xmlns="http://www.w3.org/2000/svg"><path d="M22.04,57.84v276.49h276v-188.15c0-7.87,16.35-12.88,20.24-3.24l.21,206.31c-1.9,3.82-5.55,6.05-9.9,6.09l-300.58-.52c-3.99-1.48-6.2-3.52-7.29-7.7L0,50.31c-.01-5.4,1.38-10,6.3-12.68h206.49c9.66,3.89,4.64,20.21-3.24,20.21H22.04Z"/><path d="M335.04,36.88l-167.96,167.23c-10.59,7.64-23.19-4.39-15.05-15.02L320.04,20.9h-73.5c-.69,0-4.56-2.71-5.36-3.63-4.72-5.48-2.25-16.06,5.42-17.27l104.18.7c4.22,2.29,6.1,7.05,6.3,11.68-2.52,29.69,3.28,64.7-.15,93.76-.74,6.29-3.58,11.12-10.51,11.56-4.78.3-11.37-4.69-11.37-9.45V36.88Z"/></svg>' });
 
    // Centralized URL validation and state management
   const urlInputHandler = {
@@ -847,14 +850,6 @@ function createOverlay() {
     if (url) urlInputHandler.submitUrl(url);
   });
 
-  // Error icon click handler
-  // urlErrorIcon.addEventListener('click', () => {
-  //   if (pxpIframe?.src) {
-  //     const baseUrl = pxpIframe.src.split('?')[0];
-  //     window.open(baseUrl, '_blank');
-  //   }
-  // });
-
   // Label icon click handler (open URL in new tab)
   urlNewWindowIcon.addEventListener('click', () => {
     const storedUrl = pxp.urls.getStoredUrl();
@@ -864,22 +859,28 @@ function createOverlay() {
   // Get stored opacity value or default to 100
   const initialValue = pxp.settings.getOpacity();
 
-  const sliderContainer = div({id: 'opacity-slider'},
-    div({id: 'slider-track'}),
-    div({id: 'slider-fill'}),
-    div({id: 'slider-thumb'})
+  const sliderContainer = pxpEl({id: 'opacity-slider'},
+    pxpEl({id: 'slider-track'}),
+    pxpEl({id: 'slider-fill'}),
+    pxpEl({id: 'slider-thumb'})
   );
-
+  
   // Get references to slider elements
   const sliderThumb = sliderContainer.querySelector('#slider-thumb');
   const sliderFill = sliderContainer.querySelector('#slider-fill');
+  
+  // Safety check - if elements are not found, log error and return early
+  if (!sliderThumb || !sliderFill) {
+    console.error('❌ Slider elements not found:', { sliderThumb, sliderFill, sliderContainer });
+    return;
+  }
 
   // Set percentage text to match stored opacity
   const opacityValue = pxp.settings.getOpacity().toString();
-  const value = span({id: 'opacity-value', title: 'Current opacity value'}, opacityValue + '%');
+  const value = pxpEl({id: 'opacity-value', title: 'Current opacity value'}, opacityValue + '%');
 
   // Add invert toggle button
-  const invertBtn = div({class: 'invert btn'}, 'Invert');
+  const invertBtn = pxpEl({class: 'invert btn'}, 'Invert');
 
   // Restore invert state from localStorage
   if (pxp.settings.getInverted()) {
@@ -894,14 +895,15 @@ function createOverlay() {
     {value: 'overlay', text: 'Scroll Overlay', selected: pxpScrollMode === 'overlay'}
   ];
 
-  const scrollModeDropdown = div({id: 'scroll-mode-dropdown'},
+  const scrollModeDropdown = pxpEl({id: 'scroll-mode-dropdown'},
     ...options.map(option =>
-      div({
+      pxpEl({
           class: `pxp-dropdown-option ${option.selected ? 'selected' : ''}`,
-          'data-value': option.value
+          'data-value': option.value,
+          'data-label': option.text
         },
-        span({class: 'checkmark'}, option.selected ? '✓' : ''),
-        span({}, option.text)
+        pxpEl({class: 'checkmark'}, option.selected ? '✓' : ''),
+        pxpEl(option.text)
       )
     )
   );
@@ -910,11 +912,12 @@ function createOverlay() {
   const selectedOption = options.find(option => option.selected);
   const selectedText = selectedOption ? selectedOption.text : 'Scroll Both';
 
-  const scrollModeSelect = div({
+  const scrollModeLabel = pxpEl({}, selectedText);
+  const scrollModeSelect = pxpEl({
       class: 'scroll-mode-select btn',
       title: 'Select scroll mode'
     },
-    span({}, selectedText),
+    scrollModeLabel,
     scrollModeDropdown
   );
 
@@ -926,7 +929,7 @@ function createOverlay() {
       style: 'margin-right: 8px;'
     },
     input({type: 'checkbox', checked: false}),
-    span({class: 'slider round'})
+    pxpEl({class: 'slider round'})
   );
 
   // Add on/off class based on toggle state
@@ -941,8 +944,11 @@ function createOverlay() {
 
   // Centralized function to handle overlay state changes
   const setOverlayState = (isOn) => {
+
     // Update toggle input
-    toggleInput.checked = isOn;
+    if (toggleInput) {
+      toggleInput.checked = isOn;
+    }
 
     // Update control classes
     updateControlsClass();
@@ -968,15 +974,22 @@ function createOverlay() {
       // Update the global variable to ensure consistency
       pxpLastOpacityValue = targetOpacity;
 
-      // Check if URL is blank or has error - if so, open settings menu
+      // Check if URL is blank or there is an error - if so, open settings menu
       const storedUrl = pxp.urls.getStoredUrl();
       const hasBlankUrl = !storedUrl || !storedUrl.trim();
-      const hasErrorMessage = document.querySelector('.url-error-message');
-      
-      if (hasBlankUrl || hasErrorMessage) {
+      const hasErrorMessage = !!document.querySelector('.url-error-message');
+      const hasErrorFlag = !!currentError; // covers cases where error exists but DOM not rendered yet
+
+
+
+      if (hasBlankUrl || hasErrorMessage || hasErrorFlag) {
+
         // Open settings menu
         const settingsMenu = document.getElementById('settings-menu');
-        if (settingsMenu) settingsMenu.classList.add('active');
+        if (settingsMenu) {
+          settingsMenu.classList.add('active');
+
+        }
       }
 
       // Check server status when turning ON
@@ -1002,7 +1015,7 @@ function createOverlay() {
       // Hide overlay
       pxpOverlay.classList.add('off');
 
-      // Disable slider functionality but keep other controls enabled
+      // todo: move to CSS - Disable slider functionality but keep other controls enabled
       sliderContainer.classList.add('disabled');
       sliderContainer.style.pointerEvents = 'none';
       urlInput.disabled = false;
@@ -1023,31 +1036,35 @@ function createOverlay() {
     pxp.settings.setOverlayState(isOn);
   };
 
-  // Add toggle event handler
-  toggleInput.addEventListener('change', function () {
-    setOverlayState(toggleInput.checked);
-  });
+  // Add toggle event handler with null check
+  if (toggleInput) {
+    toggleInput.addEventListener('change', function () {
+
+      setOverlayState(toggleInput.checked);
+    });
+  } else {
+    console.error('❌ toggleInput not found in onOffToggle:', onOffToggle);
+  }
 
 
   // Settings burger icon
-  const settingsBtn = div({class: 'settings-burger', title: 'Settings'});
-  settingsBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  const settingsBtn = pxpEl({class: 'settings-burger', title: 'Settings', html: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' });
   settingsBtn.addEventListener('click', function () {
     const isVisible = settingsMenu.classList.contains('active');
     settingsMenu.classList.toggle('active', !isVisible);
   });
 
   // Add close button
-  const closeBtn = div({id: 'close-btn', title: 'Close overlay'}, '×');
+  const closeBtn = pxpEl({id: 'close-btn', title: 'Close overlay'}, '×');
   closeBtn.addEventListener('click', function () {
     toggleOverlay();
   });
 
   // Add open overlay button
-  const openOverlay = div({
+  const openOverlay = pxpEl({
     id: 'open-overlay',
     title: 'Open overlay in new tab',
-    innerHTML: innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="15,3 21,3 21,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    html: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="15,3 21,3 21,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     onclick: () => {
       if (pxpIframe && pxpIframe.src) {
         window.open(pxpIframe.src, '_blank');
@@ -1063,26 +1080,30 @@ function createOverlay() {
   let sliderStartX = 0;
   let sliderStartLeft = 0;
 
-  sliderThumb.addEventListener('mousedown', function (e) {
-    isSliderDragging = true;
-    sliderStartX = e.clientX;
-    sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
-    document.addEventListener('mousemove', onSliderMouseMove);
-    document.addEventListener('mouseup', onSliderMouseUp);
-  });
+  // Add event listeners with null checks
+  if (sliderThumb) {
+    sliderThumb.addEventListener('mousedown', function (e) {
+      isSliderDragging = true;
+      sliderStartX = e.clientX;
+      sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
+      document.addEventListener('mousemove', onSliderMouseMove);
+      document.addEventListener('mouseup', onSliderMouseUp);
+    });
 
-  // Add touch support for slider thumb
-  sliderThumb.addEventListener('touchstart', function (e) {
-    e.preventDefault();
-    isSliderDragging = true;
-    const touch = e.touches[0];
-    sliderStartX = touch.clientX;
-    sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
-    document.addEventListener('touchmove', onSliderTouchMove, {passive: false});
-    document.addEventListener('touchend', onSliderTouchEnd, {passive: false});
-  });
+    // Add touch support for slider thumb
+    sliderThumb.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      isSliderDragging = true;
+      const touch = e.touches[0];
+      sliderStartX = touch.clientX;
+      sliderStartLeft = parseFloat(sliderThumb.style.left) || 0;
+      document.addEventListener('touchmove', onSliderTouchMove, {passive: false});
+      document.addEventListener('touchend', onSliderTouchEnd, {passive: false});
+    });
+  }
 
-  sliderContainer.addEventListener('click', function (e) {
+  if (sliderContainer) {
+    sliderContainer.addEventListener('click', function (e) {
     if (!isSliderDragging) {
       const rect = sliderContainer.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -1093,10 +1114,10 @@ function createOverlay() {
       sliderFill.style.width = clampedPercentage + '%';
       updateOpacity(clampedPercentage);
     }
-  });
+    });
 
-  // Add touch support for slider container
-  sliderContainer.addEventListener('touchstart', function (e) {
+    // Add touch support for slider container
+    sliderContainer.addEventListener('touchstart', function (e) {
     if (!isSliderDragging) {
       e.preventDefault();
       const rect = sliderContainer.getBoundingClientRect();
@@ -1109,17 +1130,7 @@ function createOverlay() {
       sliderFill.style.width = clampedPercentage + '%';
       updateOpacity(clampedPercentage);
     }
-  }, {passive: false});
-
-  // Snap function - snaps to 50% if within 3% range
-  function snapToFifty(value) {
-    const snapTarget = 50;
-    const snapRange = 3;
-    
-    if (Math.abs(value - snapTarget) <= snapRange) {
-      return snapTarget;
-    }
-    return value;
+    }, {passive: false});
   }
 
   function onSliderMouseMove(e) {
@@ -1129,13 +1140,10 @@ function createOverlay() {
     const deltaX = e.clientX - sliderStartX;
     const newLeft = sliderStartLeft + (deltaX / rect.width) * 100;
     const clampedLeft = Math.max(0, Math.min(100, newLeft));
-    
-    // Apply snap to 50% if within range
-    const snappedLeft = snapToFifty(clampedLeft);
 
-    sliderThumb.style.left = snappedLeft + '%';
-    sliderFill.style.width = snappedLeft + '%';
-    updateOpacity(snappedLeft);
+    sliderThumb.style.left = clampedLeft + '%';
+    sliderFill.style.width = clampedLeft + '%';
+    updateOpacity(clampedLeft);
   }
 
   function onSliderMouseUp() {
@@ -1153,13 +1161,10 @@ function createOverlay() {
     const deltaX = touch.clientX - sliderStartX;
     const newLeft = sliderStartLeft + (deltaX / rect.width) * 100;
     const clampedLeft = Math.max(0, Math.min(100, newLeft));
-    
-    // Apply snap to 50% if within range
-    const snappedLeft = snapToFifty(clampedLeft);
 
-    sliderThumb.style.left = snappedLeft + '%';
-    sliderFill.style.width = snappedLeft + '%';
-    updateOpacity(snappedLeft);
+    sliderThumb.style.left = clampedLeft + '%';
+    sliderFill.style.width = clampedLeft + '%';
+    updateOpacity(clampedLeft);
   }
 
   function onSliderTouchEnd() {
@@ -1222,9 +1227,8 @@ function createOverlay() {
       pxpScrollMode = newMode;
       pxp.settings.setScrollMode(newMode);
 
-      // Update button text
-      const buttonText = scrollModeSelect.querySelector('span');
-      buttonText.textContent = dropdownOption.querySelector('span:last-child').textContent;
+      // Update button text from data attr
+      scrollModeLabel.textContent = dropdownOption.dataset.label || '';
 
       // Update selected state
       this.querySelectorAll('.pxp-dropdown-option').forEach(option => {
@@ -1270,16 +1274,16 @@ function createOverlay() {
   });
 
   // Create settings menu
-  const settingsMenu = div({ id: 'settings-menu' });
+  const settingsMenu = pxpEl({ id: 'settings-menu' });
 
   // Add URL input setting (first option)
-  const urlOption = div({class: 'settings-option url-option'},
-    div({class: 'url-label'}, 
+  const urlOption = pxpEl({class: 'settings-option url-option'},
+    pxpEl({class: 'url-label'}, 
       'Overlay URL',
       urlNewWindowIcon
     ),
-    div({class: 'url-input-container'},
-      div({class: 'input-wrapper'},
+    pxpEl({class: 'url-input-container'},
+      pxpEl({class: 'input-wrapper'},
         urlInput,
         urlGoIcon,
         urlErrorIcon,
@@ -1289,22 +1293,22 @@ function createOverlay() {
   );
 
   // Add dock setting
-  const dockOption = div({class: 'settings-option'},
-    span({class: 'settings-text'}, 'Dock'),
-    div({class: 'dock-buttons'},
-      div({class: 'dock-btn', 'data-position': 'top'}, '⊤'),
-      div({class: 'dock-btn', 'data-position': 'bottom'}, '⊥')
+  const dockOption = pxpEl({class: 'settings-option'},
+    pxpEl({class: 'settings-text'}, 'Dock'),
+    pxpEl({class: 'dock-buttons'},
+      pxpEl({class: 'dock-btn', 'data-position': 'top'}, '⊤'),
+      pxpEl({class: 'dock-btn', 'data-position': 'bottom'}, '⊥')
     )
   );
 
 
   // dark theme setting
   const darkThemeToggle = input({type: 'checkbox', id: 'dark-theme-toggle', checked: pxp.settings.getDarkTheme()});
-  const darkThemeOption = div({class: 'settings-option'},
-    span({class: 'settings-text'}, 'Dark theme'),
+  const darkThemeOption = pxpEl({class: 'settings-option'},
+    pxpEl({class: 'settings-text'}, 'Dark theme'),
     label({class: 'switch'},
       darkThemeToggle,
-      span({class: 'slider round'})
+      pxpEl({class: 'slider round'})
     )
   );
 
@@ -1325,11 +1329,11 @@ function createOverlay() {
 
   // Sync URL path setting
   const syncUrlPathToggle = input({type: 'checkbox', id: 'sync-url-path-toggle', checked: pxp.settings.getSyncUrlPath()});
-  const syncUrlPathOption = div({class: 'settings-option'},
-    span({class: 'settings-text'}, 'Sync URL path'),
+  const syncUrlPathOption = pxpEl({class: 'settings-option'},
+    pxpEl({class: 'settings-text'}, 'Sync URL path'),
     label({class: 'switch'},
       syncUrlPathToggle,
-      span({class: 'slider round'})
+      pxpEl({class: 'slider round'})
     )
   );
 
@@ -1380,6 +1384,7 @@ function createOverlay() {
       const syncedUrl = pxp.urls.getUrlWithPathSync();
       if (syncedUrl !== currentStoredUrl) {
         pxp.urls.setStoredUrl(syncedUrl);
+
         
         const urlInput = document.getElementById('url-input');
         if (urlInput) {
@@ -1388,7 +1393,6 @@ function createOverlay() {
       }
     }
   });
-
 
   settingsMenu.append(urlOption, syncUrlPathOption, dockOption, darkThemeOption);
   pxpControls.appendChild(settingsMenu);
@@ -1436,7 +1440,6 @@ function createOverlay() {
     }
   });
 
-
   pxpControls.append(
     pxpIcon,
     onOffToggle,
@@ -1476,13 +1479,12 @@ function createOverlay() {
 
   document.body.append(pxpOverlay, pxpControls);
 
-
-  // Show simple update link in settings menu
+  // Show update link in settings menu
   function showUpdateLink(latestVersion) {
     const settingsMenu = document.getElementById('settings-menu');
     if (!settingsMenu || document.getElementById('update-link')) return;
     
-    const updateLink = div({class: 'settings-option'},
+    const updateLink = pxpEl({class: 'settings-option'},
       a({
         href: 'https://github.com/dave-fink/pixel-perfect-chrome-extension/releases',
         target: '_blank',
@@ -1490,12 +1492,14 @@ function createOverlay() {
       }, `Update available (v${latestVersion})`)
     );
     
-    // Add to bottom of settings menu
     settingsMenu.appendChild(updateLink);
   }
 
   // Check for updates after UI creation and show simple link if available
   setTimeout(() => {
+    // Force show upgrade link for testing
+    // showUpdateLink('2.1.0');
+    
     pxp.updates.checkForUpdates((latestVersion) => {
       if (latestVersion) showUpdateLink(latestVersion);
     });
