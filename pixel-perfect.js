@@ -1498,7 +1498,7 @@ function createOverlay() {
   // Check for updates after UI creation and show simple link if available
   setTimeout(() => {
     // Force show upgrade link for testing
-    showUpdateLink('2.1.0');
+    // showUpdateLink('2.1.0');
     
     pxp.updates.checkForUpdates((latestVersion) => {
       if (latestVersion) showUpdateLink(latestVersion);
