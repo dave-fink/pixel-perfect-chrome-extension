@@ -31,21 +31,21 @@ A Chrome extension that overlays a locoal development URL directly on top of any
 <br>
 <br>
 
-## ⚠️ Important - Known Issues
+## ⚠️ Important: Known Issue with CSS `vh` measurements ⚠️ ##
 
 > **Viewport Height (`vh`) Measurement Limitations**  
-> CSS `vh` units are based on the *viewport height*. On a standard web page, this is the height of the browser window. However, in an embedded iframe, `vh` is calculated relative to the iframe’s internal viewport — effectively the height of the iframe’s document, not the outer window.
+> CSS `vh` units are based on the *viewport height*. On a web page, this is the browser's viewport height; however, in an iframe, `vh` is calculated from the iframe’s document height, not the containing window. This is a limitation with no clean fix [#6](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues/6). 
 >
-> This discrepancy that leads to visual mismatches when comparing a page to its overlay within an iframe. 
+> This discrepancy leads to visual mismatches when comparing a page to its overlay using the iframe. 
 >
 > **💡 To detect `vh` usage on a page:**
 > 1. Load the same page URL into the **Overlay URL** input (not localhost) making the overlay URL identical to the page you are viewing.
-> 2. Set overlay opacity to 50% and enable **invert mode** — misalignments caused by `vh` differences will appear clearly; if the overlay remains uniformly gray, `vh` is likely not in use.
+> 2. Set overlay opacity to 50% and enable **invert mode** — misalignments caused by `vh` differences will appear clearly; if the overlay remains uniformly gray, `vh` is most likely not in use.
 > 3. Resize the page width to trigger responsive breakpoints.
 >
 > *`vh` units are commonly used for full-height layouts such as modals, hero sections, or mobile views - (but not limited to them).*  
 >
-> This is a browser limitation with no clean fix, a creative workaround is being investigated. [#6](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues/6)
+
 <br>
 <br>
 **If you encounter any problem - please [create a GitHub issue](https://github.com/dave-fink/pixel-perfect-chrome-extension/issues).**
